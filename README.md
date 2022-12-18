@@ -1,8 +1,5 @@
-
-# Manual:
-
 ## **Required Mods**
-- **Tundra Explorations**
+- **Tundra Exploration**
 - **Trajectories**
 - **kOSForAll**
 - **RSVP**
