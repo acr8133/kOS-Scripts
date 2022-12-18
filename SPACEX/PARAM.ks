@@ -1,0 +1,136 @@
+// LAUNCH VEHICLE parameterS
+parameter stageNo.
+
+local pLex is readjson("params1.json").
+local lLex is lexicon().
+
+if (exists("owcoord.json")) {
+	set lLex to readjson("owcoord.json").
+}
+
+pLex:add("LZ0", latlng(lLex["LZ0"]:lat, lLex["LZ0"]:lng)).
+pLex:add("LZ1", latlng(-0.132287731225158, -74.5494025150112)).
+pLex:add("LZ2", latlng(-0.140425956708956, -74.5495256417959)).
+
+missionConstants().
+parameterAdd().
+writejson(pLex, "params2.json").
+
+function parameterAdd {		// add parameters to params1
+	if (pLex["rocketType"] = 1) {
+		if (pLex["landProfile"] = 1) { RTLSmode(). }
+		if (pLex["landProfile"] = 2) { ASDSmode(). }
+		if (pLex["landProfile"] = 3) { EXPENDmode0(). }
+		if (pLex["landProfile"] = 4) { HEAVYmode0(). }
+		if (pLex["landProfile"] = 5) { HEAVYmode1(). }
+		if (pLex["landProfile"] = 6) { EXPENDmode1(). }
+
+	}
+	else {
+		if (pLex["landProfile"] = 1) { RTLSmode_SS(). }
+	}
+}
+
+function missionConstants {	// global variables
+
+	local tgtExists is false.
+	local tgtList is list().
+    list targets in tgtList.
+	for tgt in tgtList {
+		if (tgt:name = pLex["tgtInp"]) {
+			set tgtExists to true.
+		}
+	}
+	
+	if (pLex["tgtInp"]:length > 0 and tgtExists) {
+		set target to pLex["tgtInp"].
+	}
+	else {
+		set target to "".
+	}
+
+    pLex:add("fairingSepAlt", 60000).
+    pLex:add("atmHeight", body:atm:height).
+    if (hasTarget) { 
+		if (target:body = ship:body) { set pLex["tgtInc"] to target:orbit:inclination. }
+	}
+    pLex:add("windowOffset", 2.5).
+    pLex:add("goForLaunch", false).
+    pLex:add("maxQ", 0.155).
+}
+
+// FALCON FLIGHT PROFILES
+
+function RTLSmode { // SINGLE CORE RTLS
+	pLex:add("maxPayload", 7000).
+	pLex:add("tanAlt", body:atm:height).
+	pLex:add("MECOangle", 45).
+	pLex:add("tgtAlt", 60000).
+	pLex:add("pitchGain", 110).
+	pLex:add("reentryHeight", 32500).
+	pLex:add("reentryVelocity", 750).
+}
+
+function ASDSmode { // SINGLE CORE ASDS
+	pLex:add("maxPayload", 9000).
+	pLex:add("tanAlt", body:atm:height).
+	pLex:add("MECOangle", 40).
+	pLex:add("tgtAlt", 65000).
+	pLex:add("pitchGain", 97.5).
+	pLex:add("reentryHeight", 35000).
+	pLex:add("reentryVelocity", 800).
+}
+
+function EXPENDmode0 { // SINGLE CORE XPND
+    pLex:add("maxPayload", 15000).
+    pLex:add("tanAlt", body:atm:height + 5000).
+    pLex:add("MECOangle", 10).
+	pLex:add("tgtAlt", 70000).
+	pLex:add("pitchGain", 72.5).
+	pLex:add("reentryHeight", 30000).
+	pLex:add("reentryVelocity", 410).
+    // recovery parameters are still added to prevent unknown variables errors
+}
+
+function HEAVYmode0 { // CORE ASDS, BOOSTER RTLS
+	pLex:add("maxPayload", 13500).
+	pLex:add("tanAlt", body:atm:height + 10000).
+	pLex:add("MECOangle", 45).
+	pLex:add("tgtAlt", 75000).
+	pLex:add("pitchGain", 105).
+	pLex:add("reentryHeight", 32500).
+	pLex:add("reentryVelocity", 500).
+}
+
+function HEAVYmode1 { // CORE XPND, BOOSTER RTLS
+	pLex:add("maxPayload", 13500).
+	pLex:add("tanAlt", body:atm:height + 10000).
+	pLex:add("MECOangle", 45).
+	pLex:add("tgtAlt", 75000).
+	pLex:add("pitchGain", 105).
+	pLex:add("reentryHeight", 32500).
+	pLex:add("reentryVelocity", 500).
+}
+
+function EXPENDmode1 { // CORE XPND, BOOSTER XPND
+    pLex:add("maxPayload", 15000).
+    pLex:add("tanAlt", body:atm:height + 5000).
+    pLex:add("MECOangle", 10).
+	pLex:add("tgtAlt", 70000).
+	pLex:add("pitchGain", 72.5).
+	pLex:add("reentryHeight", 30000).
+	pLex:add("reentryVelocity", 410).
+    // recovery parameters are still added to prevent unknown variables errors
+}
+
+// STARSHIP FLIGHT PROFILES
+
+function RTLSmode_SS {
+    global maxPayload is 25000.
+    global tangentAltitude is body:atm:height + 5000.
+    global MECOangle is 30.
+    global targetAp is 70000.
+    global pitchGain is 0.8. // 1.0815
+    global reentryHeight is 30000.
+    global reentryVelocity is 500.
+}
