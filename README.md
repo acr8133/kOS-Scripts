@@ -8,13 +8,12 @@
 - **Rescale 2.5x**
 - **MechJeb**
 	- _Mechjeb removes engine spool from Tundra engines._
-	- _Not necessary for maneuvers and such._
 - **Module Manager**
 	- _Custom patches are needed for the script to work, paste the **ModuleManagerPatch** into your Gamedata._
-- _and all of these mods' dependencies..._
 - **FMRS**
 	- _Not required, script is compatible though._
 	- _Set the delay to 3 seconds._
+- _and all of these mods' dependencies..._
 
 ## Action Groups
 - AG1 - Falcon 9 SL Engines > Toggle Engine Mode
