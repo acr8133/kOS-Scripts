@@ -28,6 +28,8 @@
 ## **Mission GUI**
 - **ABT**
 	- _Abort launch button, set through action groups at the VAB._
+- **OVW**
+	- _Overwrite default LZ coordinates._
 - **LAUNCH VEHICLE AND PAYLOAD**
 	- _Choose the correct configuration for your mission._
 - **ORBIT ALT**
