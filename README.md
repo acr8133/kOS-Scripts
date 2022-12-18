@@ -5,6 +5,8 @@
 - **Tundra Explorations**
 - **Trajectories**
 - **kOSForAll**
+- **RSVP**
+	- _Required library for your interplanetary launches._
 - **Rescale 2.5x**
 - **MechJeb**
 	- _Mechjeb removes engine spool from Tundra engines._
