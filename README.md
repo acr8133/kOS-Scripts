@@ -21,6 +21,9 @@
 - AG4 - Dragon Capsule > toggle | Toggle Side RCS thrusters
 - AG5 - Dragon Capsule > Toggle Bulkhead RCS thrusters
 
+## **Nametags / PAWs**
+- [Inforgraphic.](https://imgur.com/a/zaiO0FY)
+
 ## **Boot Scripts**
 - Place **SX_boot.ks** into the booster's interstage and the payload's core.
 	
