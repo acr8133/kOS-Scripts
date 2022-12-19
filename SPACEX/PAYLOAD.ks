@@ -15,7 +15,7 @@ local fairingDep is false.
 runoncepath("0:/SPACEX/GUI").
 runoncepath("0:/SPACEX/PARAM", 2).
 runoncepath("0:/COMMON/GNC").
-local pLex is readjson("params2.json").
+local pLex is readjson("0:/params2.json").
 runoncepath("0:/COMMON/TIME", 1).
 
 local tgtOrb is pLex["tgtOrb"].
@@ -40,8 +40,6 @@ flightSave:add("padPos", padPos).
 local MECOangleOffset is 0.
 local localg is body:mu / body:position:sqrmagnitude.
 lock currTWR to ship:availablethrust / (ship:mass * localg).
-
-print landProfile.
 
 wait 1.
 clearscreen.
@@ -169,7 +167,7 @@ function BECO {
 		
 	EngSpl(0.5).
 	toggle AG3.
-	writejson(flightSave, "params4.json").
+	writejson(flightSave, "0:/params4.json").
 	flightSave:remove("tgtRotation").
 	wait 1.5. SafeStage(). wait 1.5.
 }
@@ -193,7 +191,7 @@ function MECO {
 		).
 	}
 
-	writejson(flightSave, "params3.json").
+	writejson(flightSave, "0:/params3.json").
 	wait 1.5. SafeStage(). 
     core:part:controlfrom(). 
 	wait 1.5. rcs on.

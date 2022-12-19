@@ -5,7 +5,7 @@ parameter mode.		// 1-ship, 2-coordinates, 3-body
 clearscreen.
 local shipLat is ship:latitude.
 local shipLng is ship:longitude.
-local pLex is readjson("params2.json").
+local pLex is readjson("0:/params2.json").
 local doIncChange is true.
 
 set tgtOrb to pLex["tgtOrb"].

@@ -1,11 +1,11 @@
 // LAUNCH VEHICLE parameterS
 parameter stageNo.
 
-local pLex is readjson("params1.json").
+local pLex is readjson("0:/params1.json").
 local lLex is lexicon().
 
-if (exists("owcoord.json")) {
-	set lLex to readjson("owcoord.json").
+if (exists("0:/advcfg.json")) {
+	set lLex to readjson("0:/advcfg.json").
 }
 
 pLex:add("LZ0", latlng(lLex["LZ0"]:lat, lLex["LZ0"]:lng)).
@@ -14,7 +14,7 @@ pLex:add("LZ2", latlng(-0.140425956708956, -74.5495256417959)).
 
 missionConstants().
 parameterAdd().
-writejson(pLex, "params2.json").
+writejson(pLex, "0:/params2.json").
 
 function parameterAdd {		// add parameters to params1
 	if (pLex["rocketType"] = 1) {

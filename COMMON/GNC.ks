@@ -1,3 +1,5 @@
+// This software includes code from KSLib, which is licensed under the MIT license. Copyright (c) 2015-2020 The KSLib team
+
 // ORBIT ANALYTICAL MATHS
 
 function Azimuth {			// azimuth heading for given inclination and target orbit altitude

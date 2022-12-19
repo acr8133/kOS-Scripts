@@ -18,11 +18,11 @@ local box0 is missionGUI:addhlayout().
 	local REBOOTButton is box0:addbutton("RBT").
 	set REBOOTButton:style:textcolor to rgb(0.75,0.75,1).
 	set REBOOTButton:style:height to 30.
-	local OVERWRITEButton is box0:addbutton("OVW").
-	set OVERWRITEButton:style:textcolor to rgb(0.75,0.75,1).
-	set OVERWRITEButton:style:height to 30.
-	set OVERWRITEButton:toggle to true.
-	REBOOTButton:hide().
+	local ADVANCEDButton is box0:addbutton("ADV").
+	set ADVANCEDButton:style:textcolor to rgb(0.75,0.75,1).
+	set ADVANCEDButton:style:height to 30.
+	set ADVANCEDButton:toggle to true.
+	// REBOOTButton:hide().
 
 local box1 is missionGUI:addhlayout().
 set box1:style:align to "center".
@@ -136,71 +136,71 @@ else {
 	set loadButton:enabled to false.
 }
 
-// create overwrite GUI
+// create advanced GUI
 
-local overwriteGUI is GUI(275).
+local advancedGUI is GUI(275).
 
-local owbox1 is overwriteGUI:addhlayout().
-set owbox1:style:align to "center".
-	local owbox1_0 is owbox1:addhbox().
-		local owlab1_0 is owbox1_0:addlabel("Landing Zone 1 (Primary)").
-		set owlab1_0:style:height to 20.
-		set owlab1_0:style:align to "center".
+local adbox1 is advancedGUI:addhlayout().
+set adbox1:style:align to "center".
+	local adbox1_0 is adbox1:addhbox().
+		local adlab1_0 is adbox1_0:addlabel("Landing Zone 1 (Primary)").
+		set adlab1_0:style:height to 20.
+		set adlab1_0:style:align to "center".
 
-local owbox2 is overwriteGUI:addhlayout().
-set owbox2:style:align to "center".
-	local owbox2_0 is owbox2:addvbox().
-		local owlab2_0 is owbox2_0:addlabel("LATITUDE").
-		set owlab2_0:style:height to 12.5.
-		set owlab2_0:style:align to "center".
-		local LZ1_LATinp is owbox2_0:addtextfield().
-	local owbox2_1 is owbox2:addvbox().
-		local owlab2_2 is owbox2_1:addlabel("LONGITUDE").
-		set owlab2_2:style:height to 12.5.
-		set owlab2_2:style:align to "center".
-		local LZ1_LNGinp is owbox2_1:addtextfield().
+local adbox2 is advancedGUI:addhlayout().
+set adbox2:style:align to "center".
+	local adbox2_0 is adbox2:addvbox().
+		local adlab2_0 is adbox2_0:addlabel("LATITUDE").
+		set adlab2_0:style:height to 12.5.
+		set adlab2_0:style:align to "center".
+		local LZ1_LATinp is adbox2_0:addtextfield().
+	local adbox2_1 is adbox2:addvbox().
+		local adlab2_2 is adbox2_1:addlabel("LONGITUDE").
+		set adlab2_2:style:height to 12.5.
+		set adlab2_2:style:align to "center".
+		local LZ1_LNGinp is adbox2_1:addtextfield().
 
-local owbox3 is overwriteGUI:addhlayout().
-set owbox3:style:align to "center".
-	local owbox3_0 is owbox3:addhbox().
-		local owlab3_0 is owbox3_0:addlabel("Landing Zone 2 (Secondary)").
-		set owlab3_0:style:height to 20.
-		set owlab3_0:style:align to "center".
+local adbox3 is advancedGUI:addhlayout().
+set adbox3:style:align to "center".
+	local adbox3_0 is adbox3:addhbox().
+		local adlab3_0 is adbox3_0:addlabel("Landing Zone 2 (Secondary)").
+		set adlab3_0:style:height to 20.
+		set adlab3_0:style:align to "center".
 
-local owbox4 is overwriteGUI:addhlayout().
-set owbox4:style:align to "center".
-	local owbox4_0 is owbox4:addvbox().
-		local owlab4_0 is owbox4_0:addlabel("LATITUDE").
-		set owlab4_0:style:height to 12.5.
-		set owlab4_0:style:align to "center".
-		local LZ2_LATinp is owbox4_0:addtextfield().
-	local owbox4_1 is owbox4:addvbox().
-		local owlab4_4 is owbox4_1:addlabel("LONGITUDE").
-		set owlab4_4:style:height to 12.5.
-		set owlab4_4:style:align to "center".
-		local LZ2_LNGinp is owbox4_1:addtextfield().
+local adbox4 is advancedGUI:addhlayout().
+set adbox4:style:align to "center".
+	local adbox4_0 is adbox4:addvbox().
+		local adlab4_0 is adbox4_0:addlabel("LATITUDE").
+		set adlab4_0:style:height to 12.5.
+		set adlab4_0:style:align to "center".
+		local LZ2_LATinp is adbox4_0:addtextfield().
+	local adbox4_1 is adbox4:addvbox().
+		local adlab4_4 is adbox4_1:addlabel("LONGITUDE").
+		set adlab4_4:style:height to 12.5.
+		set adlab4_4:style:align to "center".
+		local LZ2_LNGinp is adbox4_1:addtextfield().
 
-local owbox5 is overwriteGUI:addhlayout().
-set owbox5:style:align to "center".
-	local owbox5_0 is owbox5:addhbox().
-		local owlab5_0 is owbox5_0:addlabel("Landing Zone 3 (Droneship)").
-		set owlab5_0:style:height to 20.
-		set owlab5_0:style:align to "center".
+local adbox5 is advancedGUI:addhlayout().
+set adbox5:style:align to "center".
+	local adbox5_0 is adbox5:addhbox().
+		local adlab5_0 is adbox5_0:addlabel("Landing Zone 3 (Droneship)").
+		set adlab5_0:style:height to 20.
+		set adlab5_0:style:align to "center".
 
-local owbox6 is overwriteGUI:addhlayout().
-set owbox6:style:align to "center".
-	local owbox6_0 is owbox6:addvbox().
-		local owlab6_0 is owbox6_0:addlabel("LATITUDE").
-		set owlab6_0:style:height to 12.5.
-		set owlab6_0:style:align to "center".
-		local LZ3_LATinp is owbox6_0:addtextfield().
-	local owbox6_1 is owbox6:addvbox().
-		local owlab6_6 is owbox6_1:addlabel("LONGITUDE").
-		set owlab6_6:style:height to 12.5.
-		set owlab6_6:style:align to "center".
-		local LZ3_LNGinp is owbox6_1:addtextfield().
+local adbox6 is advancedGUI:addhlayout().
+set adbox6:style:align to "center".
+	local adbox6_0 is adbox6:addvbox().
+		local adlab6_0 is adbox6_0:addlabel("LATITUDE").
+		set adlab6_0:style:height to 12.5.
+		set adlab6_0:style:align to "center".
+		local LZ3_LATinp is adbox6_0:addtextfield().
+	local adbox6_1 is adbox6:addvbox().
+		local adlab6_6 is adbox6_1:addlabel("LONGITUDE").
+		set adlab6_6:style:height to 12.5.
+		set adlab6_6:style:align to "center".
+		local LZ3_LNGinp is adbox6_1:addtextfield().
 
-local owsaveButton is overwriteGUI:addbutton("SAVE COORDINATES").
+local adlaunchButton is advancedGUI:addbutton("SAVE COORDINATES").
 
 // GUI handler
 
@@ -209,7 +209,7 @@ local lLex is lexicon().
 local tgtExists is false.
 
 if (exists("0:/params1.json")) {
-	set pLex to readjson("params1.json").
+	set pLex to readjson("0:/params1.json").
 
 	local tgtList is list().
 	list targets in tgtList.
@@ -239,8 +239,8 @@ else {
 	).
 }
 
-if (exists("0:/owcoord.json")) {
-	set lLex to readjson("owcoord.json").
+if (exists("0:/advcfg.json")) {
+	set lLex to readjson("0:/advcfg.json").
 
 	set LZ1_LATinp:text to lLex["LZ1"]:lat:tostring.
 	set LZ1_LNGinp:text to lLex["LZ1"]:lng:tostring.
@@ -269,12 +269,12 @@ else {
 	set LZ3_LATinp:text to lLex["LZ0"]:lat:tostring.
 	set LZ3_LNGinp:text to lLex["LZ0"]:lng:tostring.
 
-	writejson(lLex, "owcoord.json").
+	writejson(lLex, "0:/advcfg.json").
 }
 
 set ABORTButton:onclick to ABORT_del@.
 set REBOOTButton:onclick to REBOOT_del@.
-set OVERWRITEButton:ontoggle to OVERWRITE_del@.
+set ADVANCEDButton:ontoggle to ADVANCED_del@.
 
 LV_del(LVpup:value).
 set LVpup:onchange to LV_del@.
@@ -287,7 +287,7 @@ set ORBrad:onclick to ORBT_del@.
 set DCKrad:onclick to DOCK_del@.
 set TGTinp:onchange to TGTN_del@.
 
-set owsaveButton:onclick to CRDS_del@.
+set adlaunchButton:onclick to CRDS_del@.
 
 local boosterLookup0 is 0.
 local boosterLookup1 is 0.
@@ -376,14 +376,14 @@ function REBOOT_del {
 	clearscreen. clearguis().
 	reboot.
 }
-function OVERWRITE_del {
+function ADVANCED_del {
 	parameter val.
 
-	if (exists("owcoord.json")) {
-		set lLex to readjson("owcoord.json").
+	if (exists("0:/advcfg.json")) {
+		set lLex to readjson("0:/advcfg.json").
 	}
-	if (val) { overwriteGUI:show(). }
-	else { overwriteGUI:hide(). }
+	if (val) { advancedGUI:show(). }
+	else { advancedGUI:hide(). }
 }
 
 function LV_del {
@@ -486,8 +486,8 @@ function CRDS_del {
 	set lLex["LZ2"] to latlng(LZ2_LATinp:text:tonumber, LZ2_LNGinp:text:tonumber).
 	set lLex["LZ0"] to latlng(LZ3_LATinp:text:tonumber, LZ3_LNGinp:text:tonumber).
 
-	writejson(lLex, "owcoord.json").
-	set OVERWRITEButton:pressed to false.
+	writejson(lLex, "0:/advcfg.json").
+	set ADVANCEDButton:pressed to false.
 }
 
 function startMissionChecker {
@@ -533,7 +533,7 @@ startMissionChecker().
 
 // serialize lexicons here
 if (launchButton:pressed) {
-	writejson(pLex, "params1.json").
+	writejson(pLex, "0:/params1.json").
 }
 
 

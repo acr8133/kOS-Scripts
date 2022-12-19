@@ -12,13 +12,13 @@ local flipVec is ship:facing:forevector.
 WaitForSep().
 runoncepath("0:/COMMON/GNC").
 
-local pLex is readjson("params2.json").
+local pLex is readjson("0:/params2.json").
 local flightSave is lexicon().
 if (core:tag = "SIDEA" or core:tag = "SIDEB") {
-	set flightSave to readjson("params4.json").
+	set flightSave to readjson("0:/params4.json").
 }
 else {
-	set flightSave to readjson("params3.json").
+	set flightSave to readjson("0:/params3.json").
 }
 
 local landProfile is pLex["landProfile"].
@@ -42,9 +42,6 @@ else { set LZ to pLex["LZ0"].  }
 
 set throt to 0.
 lock throttle to throt.
-
-local trueAltitude is 0.
-lock trueAltitude to ship:bounds:bottomaltradar.
 
 if (landProfile = 6) { shutdown. }
 
@@ -127,14 +124,6 @@ function Flip1 {
 	local tangentVector is vxcl(up:vector, srfretrograde:vector:normalized):normalized.
 	local rotateVector is vcrs(tangentVector, body:position:normalized):normalized.
 	local finalVector is (-tangentVector * angleAxis(finalAttitude, rotateVector)):normalized.
-
-	// // flip sideways to clear core stage
-	// if (core:tag = "SIDEA") {
-	// 	set rotateVector to rotateVector * angleAxis(-90, initVec).
-	// }
-	// else if (core:tag = "SIDEB") {
-	// 	set rotateVector to rotateVector * angleAxis(90, initVec).
-	// }
 
 	lock steering to lookdirup(flipVec, -rotateVector).
 	
@@ -245,15 +234,11 @@ function Flip2 {
 	if (landProfile = 1 or core:tag = "SIDEA" or core:tag = "SIDEB") {
 		lock steering to lookdirup(flipVec, rotateVector).
 		
-		until false {
-			when (vang(up:vector, ship:facing:forevector) < 15) then { brakes on. }
-			until (vang(finalVector, flipVec) < 1) { wait 0.
-				set flipVec to flipVec * angleAxis(flipPower, rotateVector).
-			}
-			set flipVec to initVec * angleAxis(180 - finalAttitude, rotateVector).
-			
-			break.
+		when (vang(up:vector, ship:facing:forevector) < 15) then { brakes on. }
+		until (vang(finalVector, flipVec) < 1) { wait 0.
+			set flipVec to flipVec * angleAxis(flipPower, rotateVector).
 		}
+		set flipVec to initVec * angleAxis(180 - finalAttitude, rotateVector).
 
 		lock steering to lookdirup(
 			heading(tgtAzimuth, finalAttitude):vector,
@@ -266,15 +251,10 @@ function Flip2 {
 		
 		lock steering to lookdirup(flipVec, -rotateVector).
 		
-		until false {
-		
-			until (vang(finalVector, flipVec) < 1) { wait 0.
-				set flipVec to flipVec * angleAxis(-flipPower, rotateVector).
-			}
-			set flipVec to tangentVector * angleAxis(finalAttitude, -rotateVector).
-			
-			break.
+		until (vang(finalVector, flipVec) < 1) { wait 0.
+			set flipVec to flipVec * angleAxis(-flipPower, rotateVector).
 		}
+		set flipVec to tangentVector * angleAxis(finalAttitude, -rotateVector).
 
 		brakes on.
 		lock steering to lookdirup(
@@ -411,6 +391,7 @@ function AtmGNC {
 function Land {
 
 	when (alt:radar < 150) then { gear on. }
+	local trueAltitude is ship:bounds:bottomaltradar.
 	when (ship:verticalspeed > -20) then { set RTRvector to up:vector. }
 	
 	set throt to 1. rcs on.
