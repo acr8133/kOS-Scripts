@@ -271,7 +271,7 @@ function LandThrottle {		// throttle for landing
 	local shipAcc is (ship:availableThrust / ship:mass) - (body:mu / body:position:sqrmagnitude).
 	local distance is ship:verticalspeed^2 / (2 * shipAcc).
 
-	return (distance / trueAltitude).
+	return (distance / ship:bounds:bottomaltradar).
 }
 
 function IntegLand { 		// landing height check through integration
