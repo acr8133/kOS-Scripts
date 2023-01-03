@@ -81,14 +81,14 @@ function WaitForSep {
 	local currCoreCounts is initCoreCount.
 
 	until (
-		(core:tag = "CORE" and currCoreCounts = 2) or
+		(core:tag = "CORE" and stage:number = 2) or
 		((core:tag = "SIDEA" or core:tag = "SIDEB") and currCoreCounts = 1)
 	) {
 		set initVec to ship:facing:forevector.
 		set flipVec to ship:facing:forevector.
 		list processors in coreList.
 		set currCoreCounts to coreList:length.
-	
+
 		wait 0.1.
 	}
 	core:part:controlfrom().
@@ -183,7 +183,7 @@ function Boostback {
 		lock BBvec to vxcl(up:vector, LZ:altitudeposition(ship:altitude)):normalized.
 		lock steering to lookdirup(BBvec, ship:facing:topvector).
 
-		local landingOvershoot is 2500.
+		local landingOvershoot is 2500 - ((maxPayload - payloadMass) / 10).
 		local impDist is Impact(4, landProfile, LZ).
 		local intDist is impDist.
 		
@@ -281,7 +281,7 @@ function Reentry1 {
 	
 	if (landProfile = 3 and core:tag = "CORE") { 
 		set reentryHeight to reentryHeight + 5000.
-		set reentryVelocity to reentryVelocity + 200.
+		set reentryVelocity to reentryVelocity + 1.500.
 	}
 	
 	lock steering to lookdirup(
@@ -293,7 +293,7 @@ function Reentry1 {
 	EngSpl(1).
 	toggle AG2.
 	
-	wait until ship:airspeed < (reentryVelocity + ((maxPayload - payloadMass) / 20)).
+	wait until ship:airspeed < (reentryVelocity + ((maxPayload - payloadMass) / 100)).
 	EngSpl(0).
 }
 
@@ -358,8 +358,16 @@ function AtmGNC {
 	rcs on. when (ship:altitude < 11000) then { rcs off. } 
 
 	until (ship:verticalspeed > -400) { wait 0.
-		set AlatPID:setpoint to ((1 - overshootAlt) * LZ:lat) + (overshootAlt * overshootCoords:lat).
-		set AlngPID:setpoint to ((1 - overshootAlt) * LZ:lng) + (overshootAlt * overshootCoords:lng).
+		local velGain is 0.
+		if (abs(ship:verticalspeed) < 400) {
+			set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
+		}
+		else {
+			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
+		}
+
+		set AlatPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lat) + (((overshootAlt + velGain) / 2) * overshootCoords:lat).
+		set AlngPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lng) + (((overshootAlt + velGain) / 2) * overshootCoords:lng).
 	}
 	
 	local isCoreBooster is 1.	// for correct engine selection
@@ -373,24 +381,31 @@ function AtmGNC {
 	if (landProfile > 3 or forceThree) { set thrustGain to 1.667. }
 
 	until false {
+		local velGain is 0.
+		if (abs(ship:verticalspeed) < 400) {
+			set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
+		}
+		else {
+			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
+		}
 
-		set AlatPID:setpoint to ((1 - overshootAlt) * LZ:lat) + (overshootAlt * overshootCoords:lat).
-		set AlngPID:setpoint to ((1 - overshootAlt) * LZ:lng) + (overshootAlt * overshootCoords:lng).
+		set AlatPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lat) + (((overshootAlt + velGain) / 2) * overshootCoords:lat).
+		set AlngPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lng) + (((overshootAlt + velGain) / 2) * overshootCoords:lng).
 
 		if (IntegLand(
-			ship:altitude + ship:verticalspeed, 
+			ship:altitude, 
 			ship:verticalspeed, 
 			isCoreBooster, 
 			thrustGain, 
 			Impact(4, landProfile, LZ), 
-			0.1)
+			0.2)
 		) { break. }
 	}
 }
 
 function Land {
 
-	when (alt:radar < 150) then { gear on. }
+	when (alt:radar < 200) then { gear on. }
 	local trueAltitude is ship:bounds:bottomaltradar.
 	when (ship:verticalspeed > -20) then { set RTRvector to up:vector. }
 	
@@ -407,7 +422,7 @@ function Land {
 			RTRvector +
 			((vcrs(RTRvector, LNGvector) * -HlatOut) +
 			(vcrs(RTRvector, LATvector) * -HlngOut)
-				* throt
+				* ((throt + max(min((300 - abs(ship:verticalspeed)) / 200, 1), 0)) / 2)
 			)
 		),
 		LATvector
@@ -474,9 +489,18 @@ function PIDload {
 	
 	set lerpToSetpoint to 0.
 
-	set osGain to 1.5.	// overshoot gain
+	set osGain to 1.667.	// overshoot gain
+
+	local velGain is 0.
+	if (abs(ship:verticalspeed) < 400) {
+		set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
+	}
+	else {
+		set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
+	}
+	
 	if (landProfile = 1 or core:tag = "SIDEA" or core:tag = "SIDEB") {
-		lock overshootAlt to max(0.333, min(0.333, (max(0, (max(0, alt:radar) - 3000)) / 100000) ^ 0.3667)).
+		lock overshootAlt to max(0.333, min(0.333, (max(0, (max(0, alt:radar) - 5000)) / 100000) ^ 0.3667)).
 	} 
 	else {
 		lock overshootAlt to max(0.333, min(1, max(0, ship:q - 0.3) * osGain)).
@@ -487,10 +511,10 @@ function PIDload {
 	).
 
 	set AlatPID to pidloop(AlatP, AlatI, AlatD, -valRange0, valRange0).
-	set AlatPID:setpoint to ((1 - overshootAlt) * LZ:lat) + (overshootAlt * overshootCoords:lat).
-	
+	set AlatPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lat) + (((overshootAlt + velGain) / 2) * overshootCoords:lat).
+
 	set AlngPID to pidloop(AlngP, AlngI, AlngD, -valRange0, valRange0).
-	set AlatPID:setpoint to ((1 - overshootAlt) * LZ:lng) + (overshootAlt * overshootCoords:lng).
+	set AlngPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lng) + (((overshootAlt + velGain) / 2) * overshootCoords:lng).
 
 	lock AlatOut to AlatPID:update(time:seconds, Impact(1, landProfile, LZ)).
 	lock AlngOut to AlngPID:update(time:seconds, Impact(2, landProfile, LZ)).
