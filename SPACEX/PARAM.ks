@@ -68,7 +68,7 @@ function RTLSmode { // SINGLE CORE RTLS
 	pLex:add("tgtAlt", 60000).
 	pLex:add("pitchGain", 110).
 	pLex:add("reentryHeight", 32500).
-	pLex:add("reentryVelocity", 750).
+	pLex:add("reentryVelocity", 550).
 }
 
 function ASDSmode { // SINGLE CORE ASDS
