@@ -2,20 +2,21 @@
 
 // ORBIT ANALYTICAL MATHS
 
-function Azimuth {			// azimuth heading for given inclination and target orbit altitude
+function Azimuth {				// azimuth heading for given inclination and target orbit altitude
     parameter tInc, orbitAlt, raw is false, autoSwitch is false.
 
     local shipLat is ship:latitude.
 	local rawHead is 0.		// azimuth without auto switch
     if abs(tInc) < abs(shipLat) { set tInc to shipLat. }
 	if (tInc > 180) { set tInc to -360 + tInc. }
+	if (tInc < -180) { set tInc to 360 + tInc. }
 	if hasTarget { set autoSwitch to true. }
 
     local head is arcsin(max(min(cos(tInc) / cos(shipLat), 1), -1)).
 	set rawHead to head.
 	
 	if (autoSwitch) {
-		if NodeSign() > 0 { set head to 180 - head. }
+		if NodeSignTarget() > 0 { set head to 180 - head. }
 	}
 	else if (tInc < 0) { set head to 180 - head. }
 
@@ -29,23 +30,31 @@ function Azimuth {			// azimuth heading for given inclination and target orbit a
 	else { return mod(head + 360, 360). }
 }
 
-function OrbLAN {			// returns LAN of parameter
+function OrbLAN {				// returns LAN of parameter
 	parameter ves is ship.
 
-	local spLAN is ves:orbit:lan.
-	local bRot is ves:body:rotationangle.
-	local bLAN is spLAN - bRot.
-	
-	return mod(bLAN, 360).
+	if (ves:istype("orbitable")) {
+		local spLAN is ves:orbit:lan.
+		local bRot is ves:body:rotationangle.
+		local bLAN is spLAN - bRot.
+		return mod(bLAN, 360).
+	}
+	else {
+		local bLAN is ves - ship:body:rotationangle.
+		return mod(bLAN, 360).	// ves in this function returns an orbitable and scalar
+	}
 }
 
-function GetLNG {			// returns LNG where orbit intersects with latitude
-	parameter lat, tgt is ship.
-	
-	if hasTarget { set tgt to target. }
-	
-	local tInc is tgt:orbit:inclination.
-	local tLAN is OrbLAN(tgt).
+function GetLNG {				// returns LNG where orbit intersects with latitude
+	parameter lat, tInc is 0, tLan is 0.
+
+	if (hasTarget) { 
+		set tInc to target:orbit:inclination.
+		set tLAN to OrbLAN(target).
+	}
+	else {
+		set tLAN to OrbLAN(tLan).
+	}
 	
 	if (tInc < abs(lat)) {
 		if (lat > 0) { set lat to tInc. }
@@ -63,19 +72,27 @@ function GetLNG {			// returns LNG where orbit intersects with latitude
 	return list(lngAN, lngDN).
 }
 
-function TimeToTgtNode {	// returns time for ship LNG and target node intersection
-	parameter lat, lng.
+function TimeToTgtNode {		// returns time for ship LNG and target node intersection
+	parameter lat, lng, tgtSelected is true, tgtInc is 0, tgtLan is 0.
 	local rate is body:angularvel:mag * constant:radtodeg.
+	local timeAN is 0.
+	local timeDN is 0.
+
+	if (tgtSelected) {
+		set timeAN to (GetLNG(lat)[0] - lng) / rate.
+		set timeDN to (GetLNG(lat)[1] - lng) / rate.
+	}
+	else {
+		set timeAN to (GetLNG(lat, tgtInc, tgtLan)[0] - lng) / rate.
+		set timeDN to (GetLNG(lat, tgtInc, tgtLan)[1] - lng) / rate.
+	}
 	
-	local timeAN is (getLNG(lat)[0] - lng) / rate.
-	local timeDN is (getLNG(lat)[1] - lng) / rate.
-	
-	if (timeAN < 0) { return timeDN. }
-	else if (timeDN < timeAN and timeDN > 0) { return timeDN. }
-	else { return timeAN. }
+	if (timeAN < 0) { return list(timeDN, -1). }
+	else if (timeDN < timeAN and timeDN > 0) { return list(timeDN, -1). }
+	else { return list(timeAN, 1). }
 }
 
-function TimeToAltitude {	// returns time to altitude, which ever is closer
+function TimeToAltitude {		// returns time to altitude, which ever is closer
     parameter tgtAlt, mode is 0.
 
     local TA0 is ship:orbit:trueanomaly.
@@ -103,7 +120,7 @@ function TimeToAltitude {	// returns time to altitude, which ever is closer
 	else { return t1 - t0. }
 }
 
-function AltToTA {			// returns true anomalies of the points where the orbit passes the given altitude
+function AltToTA {				// returns true anomalies of the points where the orbit passes the given altitude
 	parameter sma, ecc, bodyIn, altIn.
 	
 	local rad is min(max(ship:orbit:periapsis, altIn), ship:orbit:apoapsis) + bodyIn:radius.
@@ -111,7 +128,7 @@ function AltToTA {			// returns true anomalies of the points where the orbit pas
 	return list(TAofAlt, 360 - TAofAlt). //first true anomaly will be as orbit goes from PE to AP
 }
 
-function PhaseTime {		// returns time for correct phase angle
+function PhaseTime {			// returns time for correct phase angle
 
 	local transferSMA is (target:orbit:semimajoraxis + ship:orbit:semimajoraxis) / 2.
 	local transferTime is (constant:pi * sqrt(transferSMA^3 / ship:body:mu)).
@@ -127,11 +144,11 @@ function PhaseTime {		// returns time for correct phase angle
 	return abs(t).
 }
 
-function TimeToNode {		// returns time for ship's orbit nodes
+function TimeToNodeTarget {			// returns time to reach AN/DN nodes relative to target
 
     local TA0 is ship:orbit:trueanomaly.
 
-    local ANTA is mod(360 + TA0 + NodeAngle(1), 360).
+    local ANTA is mod(360 + TA0 + NodeAngleTarget(), 360).
     local DNTA is mod(ANTA + 180, 360).
 
 	// 1 is AN, 2 is DN
@@ -152,27 +169,54 @@ function TimeToNode {		// returns time for ship's orbit nodes
     return min(t2 - t0, t1 - t0).
 }
 
+function TimeToAoP {			// returns time to reach AN/DN nodes relative to target
+	parameter tgtAoP.
+
+    local TA0 is ship:orbit:trueanomaly.
+
+    local ANTA is mod(360 + TA0 + AoPAngle(tgtAoP)[2] * AoPSign(tgtAoP), 360).
+    local DNTA is mod(ANTA + 180, 360).
+
+	// 1 is AN, 2 is DN
+	local ecc is ship:orbit:eccentricity.
+	local SMA is ship:orbit:semimajoraxis.
+
+	local t0 is time:seconds.
+	local MA0 is mod(mod(t0 - ship:orbit:epoch, ship:orbit:period) / ship:orbit:period * 360 + ship:orbit:meananomalyatepoch, 360).
+
+	local EA1 is mod(360 + arctan2(sqrt(1 - ecc^2) * sin(ANTA), ecc + cos(ANTA)), 360).
+	local MA1 is EA1 - ecc * constant:radtodeg * sin(EA1).
+	local t1 is mod(360 + MA1 - MA0, 360) / sqrt(ship:body:mu / SMA^3) / constant:radtodeg + t0.
+
+	local EA2 is mod(360 + arctan2(sqrt(1 - ecc^2) * sin(DNTA), ecc + cos(DNTA)), 360).
+	local MA2 is EA2 - ecc * constant:radtodeg * sin(EA2).
+	local t2 is mod(360 + MA2 - MA0, 360) / sqrt(ship:body:mu / SMA^3) / constant:radtodeg + t0.
+
+	if (AoPSign(tgtAoP) > 0) { return min(t2 - t0, t1 - t0). }
+	else { return max(t2 - t0, t1 - t0). }
+}
+
 // ORBIT VECTOR MATHS
 
-function OrbitTangent {		// ship velocity
+function OrbitTangent {			// ship velocity
     parameter ves is ship.
 
     return ves:velocity:orbit:normalized.
 }
 
-function OrbitBinormal {	// ship binormal
+function OrbitBinormal {		// ship binormal
     parameter ves is ship.
 
     return vcrs((ves:position - ves:body:position):normalized, OrbitTangent(ves)):normalized.
 }
 
-function TargetBinormal {	// target binormal
+function TargetBinormal {		// target binormal
     parameter ves is target.
 
     return vcrs((ves:position - ves:body:position):normalized, OrbitTangent(ves)):normalized.
 }
 
-function PhaseAngle {		// returns current phase angle between ship and target
+function PhaseAngle {			// returns current phase angle between ship and target
 	local commonBody is ship:body.
 	local vel is ship:velocity:orbit.
 
@@ -191,29 +235,29 @@ function PhaseAngle {		// returns current phase angle between ship and target
     else { return phase. }
 }
 
-function PlaneMnv {			// required dv for plane change maneuver
+function PlaneMnv {				// required dv for plane change maneuver
 	parameter orbitnrm is OrbitBinormal(), targetnrm is TargetBinormal().
 
 	local relAng is vang(orbitnrm, targetnrm).
 	local tgtInc is target:orbit:inclination.
-	local tNode is time:seconds + TimeToNode().
+	local tNode is time:seconds + TimeToNodeTarget().
 	
 	local startVel is velocityAt(ship, tNode):orbit.
 	local bodyAtNode is vcrs(OrbitBinormal(), startVel).
-	local finalVel is startVel * angleAxis(-NodeSign() * relAng, bodyAtNode).
+	local finalVel is startVel * angleAxis(-NodeSignTarget() * relAng, bodyAtNode).
 	
 	return (finalVel - startVel).
 }
 
-function NodeAltitude {		// altitude at node
+function NodeAltitude {			// altitude at node
 	parameter tNode.
 	
 	local altAtCloserNode is positionat(ship, time:seconds + tNode).
 	return (altAtCloserNode - body:position):mag - body:radius.
 }
 
-function Hohmann {			// basic hohmann transfer
-	parameter burn, orbHeight is ship:apoapsis - 1.
+function Hohmann {				// basic hohmann transfer
+	parameter burn, orbHeight is ship:apoapsis - 1, APalt is 0, PEalt is 0, mnvTime is 0.
 	// subtract to prevent 'pushed nan to stack errors'
 	
     if (burn = 1) {
@@ -225,34 +269,35 @@ function Hohmann {			// basic hohmann transfer
         
         return (targetVel - velAtAlt). 
     } 
-	else { // raise should be performed at a phase angle
-		local targetSMA is ((target:apoapsis + ship:altitude + (ship:body:radius * 2)) / 2).
-		local targetVel is sqrt(ship:body:mu * (2 / (ship:body:radius + ship:altitude) - (1 / targetSMA))).
-    	local currentVel is sqrt(ship:body:mu * (2 / (ship:body:radius + ship:altitude) - (1 / ship:orbit:semimajoraxis))).
-	
-		return velocityAt(ship, time:seconds + PhaseTime()):orbit:normalized * (targetVel - currentVel).
+	else {
+		if (hasTarget) {
+			local targetSMA is ((target:apoapsis + ship:altitude + (ship:body:radius * 2)) / 2).
+			local targetVel is sqrt(ship:body:mu * (2 / (ship:body:radius + ship:altitude) - (1 / targetSMA))).
+			local currentVel is sqrt(ship:body:mu * (2 / (ship:body:radius + ship:altitude) - (1 / ship:orbit:semimajoraxis))).
+		
+			return velocityAt(ship, time:seconds + mnvTime):orbit:normalized * (targetVel - currentVel).
+		}
+		else {
+			local targetSMA is ((PEalt + APalt + (ship:body:radius * 2)) / 2).
+			local targetVel is sqrt(ship:body:mu * (2 / (ship:body:radius + ship:altitude) - (1 / targetSMA))).
+			local currentVel is sqrt(ship:body:mu * (2 / (ship:body:radius + ship:altitude) - (1 / ship:orbit:semimajoraxis))).
+		
+			return velocityAt(ship, time:seconds + mnvTime):orbit:normalized * (targetVel - currentVel).
+		}
     }
 }
 
-function NodeAngle {		// similar to AngleToBodyXNode, but is relative to target
-    parameter mode, orbitnrm is OrbitBinormal(), tgtnrm is TargetBinormal().
+function NodeAngleTarget {		// angle to node, relative to target
+    parameter orbitnrm is OrbitBinormal(), tgtnrm is TargetBinormal().
 	
-	// no need to calculate the other if not needed
-    if (mode = 1) { 
-		local ANjoinVec is vcrs(orbitnrm, tgtnrm):normalized.
-		local ANang is vang(-body:position:normalized, ANjoinVec).
-		if (NodeSign() < 0) { set ANang to ANang * -1. }
-		return ANang. 
-	} 
-	else { 
-		local DNjoinVec is -vcrs(orbitnrm, tgtnrm):normalized.
-		local DNang is vang(-body:position:normalized, DNjoinVec).
-		if (NodeSign() < 0) { set DNang to DNang * -1. }
-		return DNang. 
-	}
+	// no need to calculate DN if not needed
+	local ANjoinVec is vcrs(orbitnrm, tgtnrm):normalized.
+	local ANang is vang(-body:position:normalized, ANjoinVec).
+	if (NodeSignTarget() < 0) { set ANang to ANang * -1. }
+	return ANang. 
 }
 
-function NodeSign {			// approaching AN or DN
+function NodeSignTarget {		// approaching AN or DN
 	if (hasTarget) {
 		local joinVec is vcrs(OrbitBinormal(), TargetBinormal()):normalized.
 		local signVec is vcrs(-body:position:normalized, joinVec):normalized.
@@ -262,6 +307,45 @@ function NodeSign {			// approaching AN or DN
 		else { return -1. }
 	} 
 	else { return 1. }
+}
+
+function AoPAngle {				// angle to argument of periapsis
+	parameter tgtAoP.
+
+	// no need to calculate DN if not needed
+	local ANVec is angleAxis(ship:orbit:lan, ship:body:angularvel:normalized) * solarPrimeVector.
+	local ANNormVec is angleAxis(-ship:orbit:inclination, ANVec) * v(0,1,0).
+	local tPEjoinVec is angleAxis(-tgtAoP, ANNormVec) * ANVec.
+	local AOPang is vang(-body:position:normalized, tPEjoinVec).
+	return list(tPEjoinVec, ANNormVec, AOPang). 
+}
+
+function AoPSign {				// approaching PE or AP
+	parameter tgtAoP.
+
+	local joinVec is AoPAngle(tgtAoP)[0].
+	local signVec is vcrs(-body:position:normalized, joinVec):normalized.
+	local sign is vdot(AoPAngle(tgtAoP)[1], signVec).
+
+	if (sign > 0) { return -1. }
+	else { return 1. }
+}
+
+function NodeAngleEquator {		// angle to node, relative to the equator
+	// no need to calculate DN if not needed
+	local ANjoinVec is angleAxis(ship:orbit:lan, ship:body:angularvel:normalized) * solarPrimeVector.
+	local ANang is vang(-body:position:normalized, ANjoinVec).
+	if (NodeSignEquator() < 0) { set ANang to ANang * -1. }
+	return ANang. 
+}
+
+function NodeSignEquator {		// approaching AN or DN
+	local joinVec is (angleAxis(ship:orbit:lan, ship:body:angularvel:normalized) * solarPrimeVector):normalized.
+	local signVec is vcrs(-body:position:normalized, joinVec):normalized.
+	local sign is vdot(OrbitBinormal(), signVec).
+
+	if (sign > 0) { return 1. }
+	else { return -1. }
 }
 
 // LANDING BURN CALCULATION
@@ -275,10 +359,17 @@ function LandThrottle {		// throttle for landing
 }
 
 function IntegLand { 		// landing height check through integration
-	parameter simHeight, simSpeed, isCoreBooster, thrustGain is 1, dist is 0, timestep is 0.1.
+	parameter simHeight, 
+		simSpeed, 
+		isCoreBooster,
+		mFlowRate,
+		eng,
+		thrustGain is 1,
+		dist is 0, 
+		timestep is 0.1.
 
 	local simAcc is 0.
-	local gravAcc is 0.
+	// local gravAcc is 0.
 	local atmo is body:atm.
 	local atmDensity is 0.
 	local atmPres is 0.
@@ -287,48 +378,42 @@ function IntegLand { 		// landing height check through integration
 	local engineForce is 0.
 	local dragForce is 0.
 	
-	local shipThrust is 0.
 	local shipMass is ship:mass.
-	local shipACD is 9.
+	local shipACD is 8.
 	
-	list engines in engList.
-	local eng is engList[isCoreBooster].
-	
-	local bodmu is body:mu.
-	local bodrad is body:radius.
-	local gconstant is constant:g0.
-	
-	local mFlowRate is eng:availablethrustat(1) / (eng:ispat(1) * gconstant).
-
+	// local bodmu is body:mu.
+	// local bodrad is body:radius.
 	set simHeight to sqrt(simHeight^2 + dist^2).
+
+	set mFlowRate to mFlowRate * timestep.
 	
 	until (simSpeed > 0) {
-		// current gravity acceleration
-		set gravAcc to bodmu / (bodrad + simHeight) ^ 2.
+		// current gravity acceleration, testing if a constant would be enough
+		// set gravAcc to bodmu / (bodrad + simHeight) ^ 2.
 	
 		// current atmosphere density
 		set atmPres to atmo:altitudepressure(simHeight).
-		set atmDensity to atmPres / (IGMM * max(10^(-5), atmo:alttemp(simHeight))).
+		set atmDensity to atmPres / (IGMM * atmo:alttemp(simHeight)).
 		
 		// calculate drag force
 		set dragForce to 0.5 * atmDensity * simSpeed^2 * shipACD.
-		
-		// combine all acceleration to single one
-		set simAcc to gravAcc - ((dragForce + engineForce) / shipMass).
 
 		// calculate thrust force
-		set shipThrust to (eng:availablethrustat(atmPres) * thrustGain).
-		set engineForce to shipThrust.
+		set engineForce to (eng:availablethrustat(atmPres) * thrustGain).
+
+		// combine all acceleration to single one
+		set simAcc to 9.81 - ((dragForce + engineForce) / shipMass).
 
 		// mass flow integration
-		set shipMass to shipMass - (mFlowRate * timestep).
+		set shipMass to shipMass - mFlowRate.
 
 		// physics integration
 		set simSpeed to simSpeed - (simAcc * timestep).
 		set simHeight to simHeight + (simSpeed * timestep).
 	}
 	
-	if (simHeight > 0) { return false. }
+	print simHeight at (0, 2).
+	if (simHeight > 100) { return false. }
 	else { return true. }
 }
 
@@ -486,8 +571,8 @@ function LinEq {			// linear equation function
 }
 
 function BetterWarp {		// better warp mode that avoids overshoots
-	parameter duration.
-	
+	parameter duration, disp is false.
+
 	local safe_margin is 1.
 	
 	local startT is time:seconds.
@@ -500,8 +585,8 @@ function BetterWarp {		// better warp mode that avoids overshoots
 	local multiplier is list(1, 10, 100, 1000, 10000, 100000, 1000000, 10000000).
 	
 	local done is false.
-	until (remainT <= 3 or done) {
-		
+	until (remainT <= 10 or done) {
+
 		local warpLevel is 0.
 		
 		until ((warpLevel >= minimumT:length) or (minimumT[warpLevel + 1] > remainT)) {
@@ -511,13 +596,29 @@ function BetterWarp {		// better warp mode that avoids overshoots
 		
 		local margin is safe_margin * multiplier[warpLevel].
 		if (remainT < margin) { set done to true. }
-		wait until (remainT < margin).
+		until (remainT < margin) {
+			if (launchButton:pressed and loadButton:pressed) { 
+				set kuniverse:timewarp:warp to 0.
+				kuniverse:timewarp:cancelwarp().
+				wait until kuniverse:timewarp:issettled.
+				set launchButton:text to "SCRUBBED". 
+				set launchButton:enabled to false.
+				wait 10. reboot. 
+				}
+			else {
+				if (disp) { set launchButton:text to "T: -" + timestamp(remainT):clock. }
+			}
+		}
 	}
 	
 	set kuniverse:timewarp:warp to 0.
-	wait remainT.
+	until (remainT < 0 or remainT = 0) { 
+		if (disp) { set launchButton:text to "T: -" + timestamp(remainT):clock. } 
+	} .
 	kuniverse:timewarp:cancelwarp().
-    wait until kuniverse:timewarp:issettled.
+    until kuniverse:timewarp:issettled {
+		if (disp) { set launchButton:text to "T: -" + timestamp(remainT):clock. }
+	}
 }
 
 function SecToDay {			// converts seconds to days
@@ -646,7 +747,9 @@ function ExecNode {			// execute maneuver node
         if (isRCS = false) { 
 			
 			local angleMult is ((5 - vang(ship:facing:forevector, nd:deltav)) / 5).
-			set throt to (min(nd:deltav:mag / maxAcc, 1) * angleMult).
+			local reqThrot is (min(nd:deltav:mag / maxAcc, 1) * angleMult).
+			if (reqThrot > 0.25) { set throt to reqThrot. }
+			else { set throt to 1. }
 		}
         else { 
 			RCSTranslate(nv * ship:facing:forevector, 
@@ -836,7 +939,6 @@ function FindMnv {
 }
 
 function WaitForThreads {
-	clearScreen.
 	ship:messages:clear().
 
 	until false { wait 0.
@@ -860,7 +962,6 @@ function WaitForThreads {
 }
 
 function EvaluateMnv {
-	clearScreen.
 
 	local successNo is 0.
 	local bestThread is 0.

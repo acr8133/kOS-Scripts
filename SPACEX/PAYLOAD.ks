@@ -12,15 +12,18 @@ set steeringmanager:rolltorquefactor to 3.
 
 local fairingDep is false.
 
-runoncepath("0:/SPACEX/GUI").
+runoncepath("0:/SPACEX/GUI_2").	// take out of boot, only for debug
 runoncepath("0:/SPACEX/PARAM", 2).
 runoncepath("0:/COMMON/GNC").
 local pLex is readjson("0:/params2.json").
 runoncepath("0:/COMMON/TIME", 1).
 
-local tgtOrb is pLex["tgtOrb"].
+local tgtOrbAP is pLex["tgtOrbAP"].
+local tgtOrbPE is pLex["tgtOrbPE"].
 local tgtAlt is pLex["tgtAlt"].
 local tgtInc is pLex["tgtInc"].
+local tgtLan is pLex["tgtLan"].
+local tgtAop is pLex["tgtAop"].
 local pitchGain is pLex["pitchGain"].
 local MECOangle is pLex["MECOangle"].
 local tanAlt is pLex["tanAlt"].
@@ -28,11 +31,23 @@ local landProfile is pLex["landProfile"].
 local payloadType is pLex["payloadType"].
 local fairingSepAlt is pLex["fairingSepAlt"].
 local atmHeight is pLex["atmHeight"].
-local rendBool is pLex["rendBool"].
-local tgtInp is pLex["tgtInp"].
+local rndBool is pLex["rndBool"].
 
 local tgtAzimuth is 0.
-set tgtAzimuth to Azimuth(tgtInc, tgtOrb).
+if (tgtInc > 180 or (tgtInc < 0 and tgtInc > -180)) {
+
+	set tgtAzimuth to Azimuth(-tgtInc, tgtOrbPE, false, true).
+	if (tgtLan:istype("scalar") and tgtLan > 180) {
+		set tgtAzimuth to Azimuth(tgtInc, tgtOrbPE, false, true).
+	}
+} 
+else {
+	set tgtAzimuth to Azimuth(-tgtInc, tgtOrbPE, false, false).
+	if (tgtLan:istype("scalar") and tgtLan > 180) {
+		set tgtAzimuth to Azimuth(tgtInc, tgtOrbPE, false, true).
+	}
+}
+
 flightSave:add("tgtAzimuth", tgtAzimuth).
 local padPos is ship:position.
 flightSave:add("padPos", padPos).
@@ -51,17 +66,25 @@ if (landProfile > 3 and landProfile < 6) { Ascent(1). }
 MECO().
 BurnToApoapsis().
 Circularization().
+if (tgtAop:istype("scalar")) { MatchSMA(). }
+
+clearScreen.
+print ship:apoapsis.
+print ship:periapsis.
+print ship:orbit:inclination.
+print ship:orbit:lan.
+print ship:orbit:argumentofperiapsis.
 
 // set target to Didymos.
 // run sc_gnc.
-SepSeq().
+// SepSeq().
 
-if (rendBool) {
-	set target to tgtInp.
+if not (rndBool = "") {
+	set target to rndBool.
 	
 	MatchPlanes().
 	Circularization(min(ship:altitude + 50, ship:apoapsis), true).
-	RaiseOrbit(true).
+	RaiseOrbit(1, PhaseTime(), true).
 	Circularization(ship:apoapsis - 1, true).	// will break on higher than target orbit
 	Docking().
 }
@@ -83,7 +106,7 @@ function Ascent {
 		lock angThr to 90 - vang(ship:up:vector:normalized, ship:facing:forevector).
 		lock throt to 1. wait until ship:verticalspeed > 10.
 		lock throtLim to ((max(0, (90 - 30) - angThr) / 100) * 3.5).
-		lock throt to 1 - throtLim.
+		lock throt to max(0.333, 1 - throtLim).
 	}
 
 	local baseThrust is ship:availablethrust.
@@ -98,6 +121,8 @@ function Ascent {
 			heading(tgtAzimuth, 0):vector) * (abs(tgtRotation) / 180))
 	).
 
+	// until false { print throt at (0, 0). print throtLim at (0, 1). }
+
 	if (landProfile > 3) { set rotateOffset to -90. }
 	if (ascentMode = 0) {	// first part of ascent
 		if (landProfile = 3 or landProfile = 6) {
@@ -109,7 +134,7 @@ function Ascent {
 				if ((payloadType = 2 or payloadType = 3 or landProfile > 3) and 
 					abs(tgtRotation) < (180) and 
 					ship:altitude > 1000) { // dragon rotation
-					set tgtRotation to tgtRotation - (0.2 * NodeSign()).
+					set tgtRotation to tgtRotation - (0.2 * NodeSignEquator()).
 				}
 			}
 		}
@@ -122,20 +147,20 @@ function Ascent {
 				if ((payloadType = 2 or payloadType = 3 or landProfile > 3) and 
 					abs(tgtRotation) < (180) and 
 					ship:altitude > 1000) { // dragon rotation
-					set tgtRotation to tgtRotation - (0.2 * NodeSign()).
+					set tgtRotation to tgtRotation - (0.2 * NodeSignEquator()).
 				}
 			}
 		}
 	}
 	else { // second part of ascent ( heavy core )
 		
-		local heavyAlt is ((tgtAlt + ApAdd) * 0.7) + (tgtOrb * 0.3).
+		local heavyAlt is ((tgtAlt + ApAdd) * 0.7) + (tgtOrbPE * 0.3).
 		if (landProfile = 5) {
 			until (currentThrust <= (baseThrust * 0.5)) { wait 0.
 				set tgtPitch to 
 					min(max(
 					(90 * (1 - ship:altitude /
-					(((tgtAlt + tgtOrb) / 2) * (pitchGain / 200))
+					(((tgtAlt + tgtOrbPE) / 2) * (pitchGain / 200))
 					))
 					, 0), MECOangle).
 			}
@@ -145,7 +170,7 @@ function Ascent {
 				set tgtPitch to 
 					min(max(
 					(90 * (1 - ship:altitude /
-					(((tgtAlt + tgtOrb) / 2) * (pitchGain / 200))
+					(((tgtAlt + tgtOrbPE) / 2) * (pitchGain / 200))
 					))
 					, MECOangle - MECOangleOffset), MECOangle).
 			}
@@ -203,7 +228,7 @@ function BurnToApoapsis {
 	if (landProfile = 4) { set fairingSepAlt to tanAlt. }
 
 	lock throt to min(
-        max(0.1, (tgtOrb - ship:apoapsis) / (tgtOrb - atmHeight)) + 
+        max(0.1, (tgtOrbPE - ship:apoapsis) / (tgtOrbPE - atmHeight)) + 
         max(0, ((30 - eta:apoapsis) * 0.075))
     , 1).
 
@@ -214,7 +239,7 @@ function BurnToApoapsis {
 			heading(tgtAzimuth, 0):vector) * (abs(tgtRotation) / 180))
 	).
 		
-	until (ship:apoapsis > tgtOrb) {
+	until (ship:apoapsis > tgtOrbPE) {
 		local avoidFireDeath is 5 * max(0, ((30 - eta:apoapsis) * 0.075)).
         set tgtPitch to
             min(max(
@@ -239,7 +264,7 @@ function BurnToApoapsis {
 }
 
 function Circularization {
-	parameter circHeight is tgtOrb, isRCS is false.
+	parameter circHeight is tgtOrbPE, isRCS is false.
 
 	set circNode to VecToNode(Hohmann(1, circHeight), time:seconds + TimeToAltitude(circHeight)).
 	add circNode.
@@ -266,7 +291,7 @@ function SepSeq {
 }
 
 function MatchPlanes {
-	local tNode to TimeToNode().
+	local tNode to TimeToNodeTarget().
 	local nodeAlt is NodeAltitude(tNode).
 	local correctTimeToAlt is 0.
 	
@@ -285,12 +310,22 @@ function MatchPlanes {
 	ExecNode(false, 10, true, 3).
 }
 
-function RaiseOrbit {
-	parameter isRCS is false.
+function MatchSMA {
+	RaiseOrbit(2, TimeToAoP(tgtAop), false, tgtOrbAP, (ship:apoapsis + ship:periapsis) / 2).
+}
 
-	set raiseNode to VecToNode(Hohmann(2), time:seconds + PhaseTime()).
-	add raiseNode.
-	
+function RaiseOrbit {
+	parameter mode, mnvTime, isRCS is false, APalt is 0, PEalt is 0.
+
+	if (mode = 1) {
+		set raiseNode to VecToNode(Hohmann(2, 0, 0, 0, mnvTime), time:seconds + mnvTime).
+		add raiseNode.
+	}
+	else {
+		set raiseNode to VecToNode(Hohmann(2, 0, APalt, PEalt, mnvTime), time:seconds + mnvTime).
+		add raiseNode.
+	}
+
 	if (isRCS) { ExecNode(false, 10, true, 3). }
 	else { ExecNode(). }
 }

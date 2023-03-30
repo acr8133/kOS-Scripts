@@ -14,7 +14,7 @@ runoncepath("0:/COMMON/GNC").
 
 local pLex is readjson("0:/params2.json").
 local flightSave is lexicon().
-if (core:tag = "SIDEA" or core:tag = "SIDEB") {
+if (core:tag = "2" or core:tag = "3") {
 	set flightSave to readjson("0:/params4.json").
 }
 else {
@@ -32,10 +32,10 @@ local tgtAzimuth is flightSave["tgtAzimuth"].
 local tgtRotation is flightSave["tgtRotation"].
 
 local LZ is 0.
-if (landProfile = 1 or core:tag = "SIDEB") { 
+if (landProfile = 1 or core:tag = "3") { 
 	set LZ to pLex["LZ1"].
 }
-else if (core:tag = "SIDEA") {
+else if (core:tag = "2") {
 	set LZ to pLex["LZ2"].
 }
 else { set LZ to pLex["LZ0"].  }
@@ -49,17 +49,17 @@ PIDvalue().
 PIDload().
 
 if (landProfile = 1 or 
-	((core:tag = "SIDEA" or core:tag = "SIDEB") and 
+	((core:tag = "2" or core:tag = "3") and 
 	(landProfile = 4 or landProfile = 5))) {
-	Flip1(180, 0.25).
+	Flip1(180, 0.333).
 	Boostback().
-	Flip2(60, 0.05).
+	Flip2(60, 0.0667).
 	Reentry1(60).
 }
 else {
 	Flip1(170, 0.333).
 	Boostback(5).
-	Flip2(45, 0.075).
+	Flip2(45, 0.08).
 	Reentry1(45).
 }
 // toggle AG1. wait 0. toggle AG1.
@@ -81,8 +81,13 @@ function WaitForSep {
 	local currCoreCounts is initCoreCount.
 
 	until (
+<<<<<<< Updated upstream
 		(core:tag = "CORE" and stage:number = 2) or
 		((core:tag = "SIDEA" or core:tag = "SIDEB") and currCoreCounts = 1)
+=======
+		(core:tag = "1" and stage:number = 2) or
+		((core:tag = "2" or core:tag = "3") and currCoreCounts = 1)
+>>>>>>> Stashed changes
 	) {
 		set initVec to ship:facing:forevector.
 		set flipVec to ship:facing:forevector.
@@ -105,6 +110,8 @@ function Flip1 {
 	set steeringmanager:yawts to (steeringmanager:yawts * 1.5).
 	set steeringmanager:pitchpid:ki to (steeringmanager:pitchpid:ki * 1.5).
 	set steeringmanager:yawpid:ki to (steeringmanager:yawpid:ki * 1.5).
+	// set steeringmanager:rolltorquefactor to 1.5.
+	set steeringmanager:rollcontrolanglerange to 45.
 
 	lock steering to lookdirup(
 		heading(tgtAzimuth, MECOangle):vector,
@@ -126,6 +133,7 @@ function Flip1 {
 	local finalVector is (-tangentVector * angleAxis(finalAttitude, rotateVector)):normalized.
 
 	lock steering to lookdirup(flipVec, -rotateVector).
+	wait until vang(ship:facing:topvector, -rotateVector) < 1.
 	
 	until (vang(finalVector, flipVec) < 25) { wait 0.
 		if (vang(ship:facing:forevector, flipVec) < 7.5) {
@@ -140,7 +148,7 @@ function Flip1 {
 	set rotateOffset to finalAttitude.
 	set flipVec to -tangentVector * angleAxis(rotateOffset, rotateVector).
 	
-	if (core:tag = "SIDEA" or core:tag = "SIDEB") { toggle AG3. }
+	if (core:tag = "2" or core:tag = "3") { toggle AG3. }
 
 	lock steering to lookdirup(flipVec, -rotateVector).
 
@@ -161,7 +169,7 @@ function Boostback {
     clearscreen. rcs off.
 	
 	// CANCEL EXCESS RETROGRADE VELOCITY
-	if (landProfile = 1 or core:tag = "SIDEA" or core:tag = "SIDEB") { 
+	if (landProfile = 1 or core:tag = "2" or core:tag = "3") { 
 		lock steering to lookdirup(
         	vxcl(up:vector, ship:srfretrograde:vector:normalized):normalized *
 			angleAxis(0, ship:facing:topvector), -rotateVector).
@@ -178,12 +186,16 @@ function Boostback {
 
 	// MANEUVER TOWARDS LZ
 	// HUGE CODE SLOW DOWN, FIX!
-	if (landProfile = 1 or core:tag = "SIDEA" or core:tag = "SIDEB") {
+	if (landProfile = 1 or core:tag = "2" or core:tag = "3") {
 		lock throt to min(max(0.125, Impact(4, landProfile, LZ) / 2), 0.8).
 		lock BBvec to vxcl(up:vector, LZ:altitudeposition(ship:altitude)):normalized.
 		lock steering to lookdirup(BBvec, ship:facing:topvector).
 
+<<<<<<< Updated upstream
 		local landingOvershoot is 2500 - ((maxPayload - payloadMass) / 10).
+=======
+		local landingOvershoot is 1000 - ((maxPayload - payloadMass) / 10).
+>>>>>>> Stashed changes
 		local impDist is Impact(4, landProfile, LZ).
 		local intDist is impDist.
 		
@@ -194,7 +206,7 @@ function Boostback {
 	} 
 	else {
 		local tempLZ is LZ.
-		local landingOvershoot is 3500.
+		local landingOvershoot is 750.
 		set LZ to body:geopositionof(LZ:position + ((padPos - LZ:position):normalized * -landingOvershoot)).
 		
 		until ((Impact(3, landProfile, LZ):position - padPos):mag < (LZ:position - padPos):mag) { 
@@ -231,7 +243,7 @@ function Flip2 {
 	local rotateVector is vcrs(tangentVector, body:position:normalized):normalized.
 	local finalVector is (initVec * angleAxis(180 - finalAttitude, rotateVector)):normalized.
 	
-	if (landProfile = 1 or core:tag = "SIDEA" or core:tag = "SIDEB") {
+	if (landProfile = 1 or core:tag = "2" or core:tag = "3") {
 		lock steering to lookdirup(flipVec, rotateVector).
 		
 		when (vang(up:vector, ship:facing:forevector) < 15) then { brakes on. }
@@ -298,7 +310,8 @@ function Reentry1 {
 }
 
 function AtmGNC {
-	if (landProfile < 3) { EngSwitch(1, 2). }
+	// if (landProfile < 3) { EngSwitch(1, 2). }
+	EngSwitch(1, 2).
 	
 	local downRange is 0.
 	lock downRange to Impact(4, landProfile, LZ).
@@ -357,8 +370,12 @@ function AtmGNC {
 
 	rcs on. when (ship:altitude < 11000) then { rcs off. } 
 
+	local velGain is 0.
 	until (ship:verticalspeed > -400) { wait 0.
+<<<<<<< Updated upstream
 		local velGain is 0.
+=======
+>>>>>>> Stashed changes
 		if (abs(ship:verticalspeed) < 400) {
 			set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
 		}
@@ -366,19 +383,29 @@ function AtmGNC {
 			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
 		}
 
+<<<<<<< Updated upstream
 		set AlatPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lat) + (((overshootAlt + velGain) / 2) * overshootCoords:lat).
 		set AlngPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lng) + (((overshootAlt + velGain) / 2) * overshootCoords:lng).
+=======
+		local altvelOS is ((overshootAlt + velGain) / 2).
+		set AlatPID:setpoint to ((1 - altvelOS) * LZ:lat) + (altvelOS * overshootCoords:lat).
+		set AlngPID:setpoint to ((1 - altvelOS) * LZ:lng) + (altvelOS * overshootCoords:lng).
+>>>>>>> Stashed changes
 	}
 	
 	local isCoreBooster is 1.	// for correct engine selection
-	if (core:tag = "SIDEA" or core:tag = "SIDEB") {
+	if (core:tag = "2" or core:tag = "3") {
 		set isCoreBooster to 0.
 	}
 
 	// set forceThree to true.
 	if (payloadMass > maxPayload or landProfile > 3) { set forceThree to true. }
 	local thrustGain is 1.
-	if (landProfile > 3 or forceThree) { set thrustGain to 1.667. }
+	if (landProfile > 3 or forceThree) { set thrustGain to 1.8. }
+
+	list engines in engList.
+	local eng is engList[isCoreBooster].
+	local mFlowRate is eng:availablethrustat(1) / (eng:ispat(1) * constant:g0).
 
 	until false {
 		local velGain is 0.
@@ -389,16 +416,35 @@ function AtmGNC {
 			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
 		}
 
+<<<<<<< Updated upstream
 		set AlatPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lat) + (((overshootAlt + velGain) / 2) * overshootCoords:lat).
 		set AlngPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lng) + (((overshootAlt + velGain) / 2) * overshootCoords:lng).
+=======
+		if (abs(ship:verticalspeed) < 400) {
+			set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
+		}
+		else {
+			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
+		}
+
+		local altvelOS is ((overshootAlt + velGain) / 2).
+		set AlatPID:setpoint to ((1 - altvelOS) * LZ:lat) + (altvelOS * overshootCoords:lat).
+		set AlngPID:setpoint to ((1 - altvelOS) * LZ:lng) + (altvelOS * overshootCoords:lng).
+>>>>>>> Stashed changes
 
 		if (IntegLand(
 			ship:altitude, 
 			ship:verticalspeed, 
-			isCoreBooster, 
+			isCoreBooster,
+			mFlowRate,
+			eng,
 			thrustGain, 
 			Impact(4, landProfile, LZ), 
+<<<<<<< Updated upstream
 			0.2)
+=======
+			0.5)
+>>>>>>> Stashed changes
 		) { break. }
 	}
 }
@@ -406,7 +452,10 @@ function AtmGNC {
 function Land {
 
 	when (alt:radar < 200) then { gear on. }
+<<<<<<< Updated upstream
 	local trueAltitude is ship:bounds:bottomaltradar.
+=======
+>>>>>>> Stashed changes
 	when (ship:verticalspeed > -20) then { set RTRvector to up:vector. }
 	
 	set throt to 1. rcs on.
@@ -422,7 +471,11 @@ function Land {
 			RTRvector +
 			((vcrs(RTRvector, LNGvector) * -HlatOut) +
 			(vcrs(RTRvector, LATvector) * -HlngOut)
+<<<<<<< Updated upstream
 				* ((throt + max(min((300 - abs(ship:verticalspeed)) / 200, 1), 0)) / 2)
+=======
+				* ((throt + max(min((250 - abs(ship:verticalspeed)) / 83.333, 2), 0)) / 3)
+>>>>>>> Stashed changes
 			)
 		),
 		LATvector
@@ -432,7 +485,7 @@ function Land {
 	
 	lock throt to LandThrottle().
 
-	when ((landProfile > 3 or forceThree) and throt < 0.5) then { EngSwitch(1, 2). }
+	when ((landProfile > 3 or forceThree) and throt < 0.333) then { EngSwitch(1, 2). }
 	
 	wait until ship:verticalspeed > -5.
 	lock throt to 1.2 * ((ship:mass * 9.81) / max(ship:availablethrust, 0.001)).
@@ -468,7 +521,7 @@ function PIDvalue {
 	set AlngOut to 0.
 	
 	// engine gimbal vector
-	set hvrP to 320.
+	set hvrP to 330.
 	set hvrI to 80.
 	set hvrD to 215.
 	
@@ -499,7 +552,11 @@ function PIDload {
 		set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
 	}
 	
+<<<<<<< Updated upstream
 	if (landProfile = 1 or core:tag = "SIDEA" or core:tag = "SIDEB") {
+=======
+	if (landProfile = 1 or core:tag = "2" or core:tag = "3") {
+>>>>>>> Stashed changes
 		lock overshootAlt to max(0.333, min(0.333, (max(0, (max(0, alt:radar) - 5000)) / 100000) ^ 0.3667)).
 	} 
 	else {

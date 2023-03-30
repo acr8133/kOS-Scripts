@@ -4,8 +4,8 @@ parameter stageNo.
 local pLex is readjson("0:/params1.json").
 local lLex is lexicon().
 
-if (exists("0:/advcfg.json")) {
-	set lLex to readjson("0:/advcfg.json").
+if (exists("0:/coordcfg.json")) {
+	set lLex to readjson("0:/coordcfg.json").
 }
 
 pLex:add("LZ0", latlng(lLex["LZ0"]:lat, lLex["LZ0"]:lng)).
@@ -17,14 +17,13 @@ parameterAdd().
 writejson(pLex, "0:/params2.json").
 
 function parameterAdd {		// add parameters to params1
-	if (pLex["rocketType"] = 1) {
+	if (pLex["payloadType"] < 4) {
 		if (pLex["landProfile"] = 1) { RTLSmode(). }
 		if (pLex["landProfile"] = 2) { ASDSmode(). }
 		if (pLex["landProfile"] = 3) { EXPENDmode0(). }
 		if (pLex["landProfile"] = 4) { HEAVYmode0(). }
 		if (pLex["landProfile"] = 5) { HEAVYmode1(). }
 		if (pLex["landProfile"] = 6) { EXPENDmode1(). }
-
 	}
 	else {
 		if (pLex["landProfile"] = 1) { RTLSmode_SS(). }
@@ -33,26 +32,12 @@ function parameterAdd {		// add parameters to params1
 
 function missionConstants {	// global variables
 
-	local tgtExists is false.
-	local tgtList is list().
-    list targets in tgtList.
-	for tgt in tgtList {
-		if (tgt:name = pLex["tgtInp"]) {
-			set tgtExists to true.
-		}
-	}
-	
-	if (pLex["tgtInp"]:length > 0 and tgtExists) {
-		set target to pLex["tgtInp"].
-	}
-	else {
-		set target to "".
-	}
-
     pLex:add("fairingSepAlt", 60000).
     pLex:add("atmHeight", body:atm:height).
     if (hasTarget) { 
-		if (target:body = ship:body) { set pLex["tgtInc"] to target:orbit:inclination. }
+		if (target:body = ship:body) { 
+			set pLex["tgtInc"] to target:orbit:inclination.
+		}
 	}
     pLex:add("windowOffset", 2.5).
     pLex:add("goForLaunch", false).
@@ -68,7 +53,11 @@ function RTLSmode { // SINGLE CORE RTLS
 	pLex:add("tgtAlt", 60000).
 	pLex:add("pitchGain", 110).
 	pLex:add("reentryHeight", 32500).
+<<<<<<< Updated upstream
 	pLex:add("reentryVelocity", 550).
+=======
+	pLex:add("reentryVelocity", 600).
+>>>>>>> Stashed changes
 }
 
 function ASDSmode { // SINGLE CORE ASDS
@@ -76,7 +65,7 @@ function ASDSmode { // SINGLE CORE ASDS
 	pLex:add("tanAlt", body:atm:height).
 	pLex:add("MECOangle", 40).
 	pLex:add("tgtAlt", 65000).
-	pLex:add("pitchGain", 97.5).
+	pLex:add("pitchGain", 97).
 	pLex:add("reentryHeight", 35000).
 	pLex:add("reentryVelocity", 800).
 }
