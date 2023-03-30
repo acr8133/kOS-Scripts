@@ -1,3 +1,4 @@
+
 ## **Required Mods**
 - **Tundra Exploration**
 - **Trajectories**
@@ -21,41 +22,30 @@
 - AG4 - Dragon Capsule > toggle | Toggle Side RCS thrusters
 - AG5 - Dragon Capsule > Toggle Bulkhead RCS thrusters
 
-## **Nametags / PAWs**
-- [Inforgraphic.](https://imgur.com/a/zaiO0FY)
-
-## **Boot Scripts**
-- Place **SX_boot.ks** into the booster's interstage and the payload's core.
+## **Setup**
+- Place **SX_boot.ks** into the booster's interstage/nosecone and the payload's core.
+- Setting of nametags for the boosters was updated to happen automatically. You still have to name your ports **'APAS'**
 	
 ## **Mission GUI**
-- **ABT**
-	- _Abort launch button, set through action groups at the VAB._
-- **OVW**
-	- _Overwrite default LZ coordinates._
-- **LAUNCH VEHICLE AND PAYLOAD**
+- **LOAD LAST PARAMETERS (BLUE FILE ICON)**
+	- With this button, you don't have to input last time's parameters every time you want to launch. Makes repetitive mission _(ehem.. Starlink)_ less tedious.
+- **PAYLOAD TYPE**
 	- _Choose the correct configuration for your mission._
-- **ORBIT ALT**
-	- _Target altitude in **kilometers**, works as target parking orbit alitude when docking._
-- **ORBIT INC**
-	- _Target inclination in **degrees**._
-	-  _0 = equatorial_
-	- _90 = polar, northbound_
-	- _180 = equatorial, retrograde_
-	- _270 = polar, southbound_
-- **PAYLOAD MASS**
-	- Payload's mass in **kilograms**, input can be estimate / not exact.
 - **ORBITAL MANEUVERING**
-	- **ORBIT**
-		- Launch into a circular orbit at target parameters.
-		- Having a target set will overwrite the **ORBIT INC** input, the rocket will try to match planes with the target ship instead.
-	- **DOCK**
-		- **Wait** for launch window, **launch** into correct plane, **rendezvous**, and **dock** to the target.
-- **BOOSTER RECOVERY MODE**
+	- Target AP and PE in **kilometers**
+	- Target inclination in **degrees**.
+		-  _0 = equatorial_
+		- _90 = polar, northbound_
+		- _180 = equatorial, retrograde_
+		- _270 = polar, southbound_
+	- Longitude of Ascending Node (LAN) 'I Button' launches your rocket instantaneously, no windows required.
+	- Argument of Periapsis (AOP) 'C Button' circularizes your orbit, overwriting set AP height.
+	- Payload's mass in **kilograms**, input can be estimate / not exact.
+	- Choose *'ORBIT'* to launch into your set orbital parameters, choosing *'DOCK'* will overwrite everything and the rocket will attempt to dock to a target instead.
+- **BOOSTER RECOVERY**
 	- Choose your desired recovery mode.
 - **START NEW MISSION**
 	- Start the mission! Will only be available when all parameters are filled-in.
-- **LOAD LAST PARAMETERS**
-	- With this button, you don't have to input last time's parameters every time you want to launch. Makes repetitive mission _(ehem.. Starlink)_ less tedious.
 
 
 ## ASDS
