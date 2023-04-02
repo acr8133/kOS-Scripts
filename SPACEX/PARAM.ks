@@ -4,13 +4,18 @@ parameter stageNo.
 local pLex is readjson("0:/params1.json").
 local lLex is lexicon().
 
+// load default unless override file is present
 if (exists("0:/coordcfg.json")) {
 	set lLex to readjson("0:/coordcfg.json").
+	pLex:add("LZ0", latlng(lLex["LZ0"]:lat, lLex["LZ0"]:lng)).
+	pLex:add("LZ1", latlng(lLex["LZ1"]:lat, lLex["LZ1"]:lng)).
+	pLex:add("LZ2", latlng(lLex["LZ2"]:lat, lLex["LZ2"]:lng)).
 }
-
-pLex:add("LZ0", latlng(lLex["LZ0"]:lat, lLex["LZ0"]:lng)).
-pLex:add("LZ1", latlng(-0.132287731225158, -74.5494025150112)).
-pLex:add("LZ2", latlng(-0.140425956708956, -74.5495256417959)).
+else {
+	pLex:add("LZ0", latlng(-0.11, -70)).
+	pLex:add("LZ1", latlng(-0.132287731225158, -74.5494025150112)).
+	pLex:add("LZ2", latlng(-0.140425956708956, -74.5495256417959)).
+}
 
 missionConstants().
 parameterAdd().
@@ -53,11 +58,7 @@ function RTLSmode { // SINGLE CORE RTLS
 	pLex:add("tgtAlt", 60000).
 	pLex:add("pitchGain", 110).
 	pLex:add("reentryHeight", 32500).
-<<<<<<< Updated upstream
-	pLex:add("reentryVelocity", 550).
-=======
 	pLex:add("reentryVelocity", 600).
->>>>>>> Stashed changes
 }
 
 function ASDSmode { // SINGLE CORE ASDS

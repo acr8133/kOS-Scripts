@@ -26,7 +26,7 @@ for core in coreList {
 }
 
 if (core:tag = "1" or core:tag = "2" or core:tag = "3") {
-	core:doEvent("Open Terminal").
+	// core:doEvent("Open Terminal").
 	runpath("0:/SPACEX/BOOSTER").
 }
 else {
