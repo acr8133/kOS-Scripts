@@ -45,8 +45,7 @@ lock throttle to throt.
 
 if (landProfile = 6) { shutdown. }
 
-PIDvalue().
-PIDload().
+PIDsetup().
 
 if (landProfile = 1 or 
 	((core:tag = "2" or core:tag = "3") and 
@@ -62,9 +61,6 @@ else {
 	Flip2(45, 0.08).
 	Reentry1(45).
 }
-// toggle AG1. wait 0. toggle AG1.
-// clearScreen.
-// core:doEvent("Open Terminal").
 
 AtmGNC().
 Land().	
@@ -105,7 +101,7 @@ function Flip1 {
 	set steeringmanager:yawts to (steeringmanager:yawts * 1.5).
 	set steeringmanager:pitchpid:ki to (steeringmanager:pitchpid:ki * 1.5).
 	set steeringmanager:yawpid:ki to (steeringmanager:yawpid:ki * 1.5).
-	// set steeringmanager:rolltorquefactor to 1.5.
+	set steeringmanager:rolltorquefactor to 3.
 	set steeringmanager:rollcontrolanglerange to 45.
 
 	lock steering to lookdirup(
@@ -128,9 +124,11 @@ function Flip1 {
 	local finalVector is (-tangentVector * angleAxis(finalAttitude, rotateVector)):normalized.
 
 	lock steering to lookdirup(flipVec, -rotateVector).
-	local startT is time:seconds.
-	local timer is startT + 3.
-	wait until (vang(ship:facing:topvector, -rotateVector) < 1 and time:seconds > timer).
+	if (core:tag = "2" or core:tag = "3") {
+		local startT is time:seconds.
+		local timer is startT + 2.
+		wait until (vang(ship:facing:topvector, -rotateVector) < 1 and time:seconds > timer).
+	}
 	
 	until (vang(finalVector, flipVec) < 25) { wait 0.
 		if (vang(ship:facing:forevector, flipVec) < 7.5) {
@@ -372,7 +370,7 @@ function AtmGNC {
 			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
 		}
 
-		local altvelOS is ((overshootAlt + velGain) / 2).
+		local altvelOS is (overshootAlt + velGain) / 2.
 		set AlatPID:setpoint to ((1 - altvelOS) * LZ:lat) + (altvelOS * overshootCoords:lat).
 		set AlngPID:setpoint to ((1 - altvelOS) * LZ:lng) + (altvelOS * overshootCoords:lng).
 	}
@@ -385,7 +383,7 @@ function AtmGNC {
 	// set forceThree to true.
 	if (payloadMass > maxPayload or landProfile > 3) { set forceThree to true. }
 	local thrustGain is 1.
-	if (landProfile > 3 or forceThree) { set thrustGain to 1.8. }
+	if (landProfile > 3 or forceThree) { set thrustGain to 1.5. }
 
 	list engines in engList.
 	local eng is engList[isCoreBooster].
@@ -412,7 +410,7 @@ function AtmGNC {
 			eng,
 			thrustGain, 
 			Impact(4, landProfile, LZ), 
-			0.5)
+			1)
 		) { break. }
 	}
 }
@@ -452,8 +450,8 @@ function Land {
 
 	wait until ship:status = "LANDED".
 
-	local throttleDamper is 0.667.
-	until false {
+	local throttleDamper is 1.
+	until false { wait 0.
 		set throt to throttleDamper * ((ship:mass * 9.81) / max(ship:availablethrust, 0.001)).
 		set throttleDamper to throttleDamper - 0.025.
 
@@ -464,54 +462,14 @@ function Land {
 	wait until false.
 }
 
-function PIDvalue {
-    // atmospheric gridfins
-	set atmP to 62.5.
-	set atmI to 1.65.
-	set atmD to 4.
-	
-	set AlatP to atmP.
-	set AlatI to atmI.
-	set AlatD to atmD.
-	set AlatOut to 0.
-	
-	set AlngP to atmP.
-	set AlngI to atmI.
-	set AlngD to atmD.
-	set AlngOut to 0.
-	
-	// engine gimbal vector
-	set hvrP to 330.
-	set hvrI to 80.
-	set hvrD to 215.
-	
-	set HlatP to hvrP.
-	set HlatI to hvrI.
-	set HlatD to hvrD.
-	set HlatOut to 0.
-	
-	set HlngP to hvrP.
-	set HlngI to hvrI.
-	set HlngD to hvrD.
-	set HlngOut to 0.
-}
+function PIDsetup {
+	global atmPID is list(62.5, 1.65, 4, tan(20)).
+	global hvrPID is list(325, 80, 215, tan(10)).
 
-function PIDload {
-	local valRange0 is tan(20).
-	local valRange1 is tan(10).
-	
 	set lerpToSetpoint to 0.
-
-	set osGain to 1.667.	// overshoot gain
-
+	set osGain to 1.667.
 	local velGain is 0.
-	if (abs(ship:verticalspeed) < 400) {
-		set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
-	}
-	else {
-		set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
-	}
-	
+
 	if (landProfile = 1 or core:tag = "2" or core:tag = "3") {
 		lock overshootAlt to max(0.333, min(0.333, (max(0, (max(0, alt:radar) - 5000)) / 100000) ^ 0.3667)).
 	} 
@@ -523,23 +481,21 @@ function PIDload {
 		LZ:altitudeposition(0) - ship:geoPosition:altitudeposition(0)
 	).
 
-	set AlatPID to pidloop(AlatP, AlatI, AlatD, -valRange0, valRange0).
-	set AlatPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lat) + (((overshootAlt + velGain) / 2) * overshootCoords:lat).
-
-	set AlngPID to pidloop(AlngP, AlngI, AlngD, -valRange0, valRange0).
-	set AlngPID:setpoint to ((1 - ((overshootAlt + velGain) / 2)) * LZ:lng) + (((overshootAlt + velGain) / 2) * overshootCoords:lng).
+	set AlatPID to pidloop(atmPID[0], atmPID[1], atmPID[2], -atmPID[3], atmPID[3]).
+	set AlngPID to pidloop(atmPID[0], atmPID[1], atmPID[2], -atmPID[3], atmPID[3]).
 
 	lock AlatOut to AlatPID:update(time:seconds, Impact(1, landProfile, LZ)).
 	lock AlngOut to AlngPID:update(time:seconds, Impact(2, landProfile, LZ)).
 
-	set HlatPID to pidloop(HlatP, HlatI, HlatD, -valRange1, valRange1).
+	set HlatPID to pidloop(hvrPID[0], hvrPID[1], hvrPID[2], -hvrPID[3], hvrPID[3]).
 	set HlatPID:setpoint to LZ:lat.	
 	
-	set HlngPID to pidloop(HlngP, HlngI, HlngD, -valRange1, valRange1).
+	set HlngPID to pidloop(hvrPID[0], hvrPID[1], hvrPID[2], -hvrPID[3], hvrPID[3]).
 	set HlngPID:setpoint to LZ:lng.
-	
+
 	lock HlatOut to HlatPID:update(time:seconds, Impact(1, landProfile, LZ)).
 	lock HlngOut to HlngPID:update(time:seconds, Impact(2, landProfile, LZ)).
+
 }
 
 function EngSwitch {
