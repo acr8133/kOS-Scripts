@@ -58,7 +58,7 @@ if (landProfile = 1 or
 else {
 	Flip1(170, 0.333).
 	Boostback(5).
-	Flip2(45, 0.08).
+	Flip2(45, 0.075).
 	Reentry1(45).
 }
 
@@ -76,17 +76,23 @@ function WaitForSep {
 	local initCoreCount is coreList:length.
 	local currCoreCounts is initCoreCount.
 
+	list engines in engList.
+	local currEngCounts is engList:length.
+
 	until (
-		(core:tag = "1" and stage:number = 2) or
+		(core:tag = "1" and currEngCounts = 2) or
 		((core:tag = "2" or core:tag = "3") and currCoreCounts = 1)
 	) {
 		set initVec to ship:facing:forevector.
 		set flipVec to ship:facing:forevector.
 		list processors in coreList.
 		set currCoreCounts to coreList:length.
-
+		list engines in engList.
+		set currEngCounts to engList:length.
 		wait 0.1.
 	}
+
+	print "here".
 	core:part:controlfrom().
 	wait 2.
 }
@@ -96,7 +102,7 @@ function Flip1 {
 	
 	// flip preparation
 	kuniverse:timewarp:cancelwarp().
-	set steeringmanager:maxstoppingtime to 4.5. rcs on.
+	set steeringmanager:maxstoppingtime to 3. rcs on.
 	set steeringmanager:pitchts to (steeringmanager:pitchts * 1.5).
 	set steeringmanager:yawts to (steeringmanager:yawts * 1.5).
 	set steeringmanager:pitchpid:ki to (steeringmanager:pitchpid:ki * 1.5).
@@ -124,20 +130,24 @@ function Flip1 {
 	local finalVector is (-tangentVector * angleAxis(finalAttitude, rotateVector)):normalized.
 
 	lock steering to lookdirup(flipVec, -rotateVector).
+
 	if (core:tag = "2" or core:tag = "3") {
 		local startT is time:seconds.
 		local timer is startT + 2.
-		wait until (vang(ship:facing:topvector, -rotateVector) < 1 and time:seconds > timer).
+		wait until (vang(ship:facing:topvector, vxcl(ship:facing:forevector, -rotateVector)) < 1 and time:seconds > timer).
 	}
 	
+	// when (vang(finalVector, flipVec) < MECOangle + 60) then { EngSpl(0.25). }
+	// when (vang(finalVector, flipVec) < MECOangle + 30) then { EngSpl(0). }
+
 	until (vang(finalVector, flipVec) < 25) { wait 0.
 		if (vang(ship:facing:forevector, flipVec) < 7.5) {
 			set flipVec to flipVec * angleAxis(flipPower, rotateVector).
 		}
 	}
-	EngSpl(0.5).
+	// EngSpl(0.5).
 	
-	until (vang(finalVector, flipVec) < 10) { wait 0.
+	until (vang(finalVector, flipVec) < 15) { wait 0.
 		set flipVec to flipVec * angleAxis(flipPower, rotateVector).
 	}
 	set rotateOffset to finalAttitude.
@@ -156,12 +166,14 @@ function Boostback {
 	if (rotateOffset > 0) { set rotOffset to rotateOffset. }	// pass rotateOffset value to flip function
 
 	steeringmanager:resettodefault().
-	set steeringmanager:maxstoppingtime to 20.
+	set steeringmanager:maxstoppingtime to 15.
 	set steeringmanager:rollts to 20.
 	
 	local tangentVector is vxcl(up:vector, srfretrograde:vector):normalized.
 	local rotateVector is vcrs(tangentVector, body:position:normalized):normalized.
+
     clearscreen. rcs off.
+	// print LZVel:mag at (0, 1).
 	
 	// CANCEL EXCESS RETROGRADE VELOCITY
 	if (landProfile = 1 or core:tag = "2" or core:tag = "3") { 
@@ -182,26 +194,35 @@ function Boostback {
 	// MANEUVER TOWARDS LZ
 	// HUGE CODE SLOW DOWN, FIX!
 	if (landProfile = 1 or core:tag = "2" or core:tag = "3") {
-		lock throt to min(max(0.125, Impact(4, landProfile, LZ) / 2), 0.8).
+		lock throt to min(max(0.125, Impact(1, landProfile, LZ) / 2), 1).
 		lock BBvec to vxcl(up:vector, LZ:altitudeposition(ship:altitude)):normalized.
 		lock steering to lookdirup(BBvec, ship:facing:topvector).
 
-		local landingOvershoot is 1000 - ((maxPayload - payloadMass) / 10).
-		local impDist is Impact(4, landProfile, LZ).
+		local landingOvershoot is 0 * 1000 - ((maxPayload - payloadMass) / 7).
+		local impDist is Impact(1, landProfile, LZ).
 		local intDist is impDist.
 		
-		until (impDist < landingOvershoot) { 
-			set impDist to Impact(4, landProfile, LZ).
+		until (impDist < landingOvershoot) {
+			local bodPos is body:position.
+			local landAngle is vang(bodPos, vxcl(rotateVector, Impact(0, landProfile, LZ):position)).
+			local LZAngle is vang(bodPos, vxcl(rotateVector, LZ:position)).
+			local isTooFar is landAngle > LZAngle.
+			if (isTooFar) { set impDist to -Impact(1, landProfile, LZ). }
+			else { set impDist to Impact(1, landProfile, LZ). }
+			
+			wait 0.
 			set throt to max(0.25, impDist / intDist).
 		}
 	} 
 	else {
 		local tempLZ is LZ.
-		local landingOvershoot is 750.
+		local landingOvershoot is 0 * 750.
 		set LZ to body:geopositionof(LZ:position + ((padPos - LZ:position):normalized * -landingOvershoot)).
-		
-		until ((Impact(3, landProfile, LZ):position - padPos):mag < (LZ:position - padPos):mag) { 
-			set throt to min(max(0.125, Impact(4, landProfile, LZ) / 2000), 0.85).
+		local intDist is Impact(1, landProfile, LZ).
+
+		until ((Impact(0, landProfile, LZ):position - padPos):mag < (LZ:position - padPos):mag) { 
+			wait 0.
+			set throt to max(0.125, (Impact(1, landProfile, LZ) / intDist)).
 		}
 		set LZ to tempLZ.
 		
@@ -225,7 +246,7 @@ function Flip2 {
 	set steeringmanager:rollts to 20.
 	set steeringmanager:rolltorquefactor to 0.5.
 
-    wait 3. unlock steering.
+    wait 2. unlock steering.
 	
 	// flip sequence
 	local tangentVector is vxcl(up:vector, srfretrograde:vector:normalized):normalized.
@@ -275,37 +296,37 @@ function Reentry1 {
 	parameter holdAngle.
 
 	local rtrDiff is 90 - vang(ship:up:vector:normalized, ship:srfretrograde:vector:normalized).
-	until (rtrDiff >= holdAngle) { 
+	until (rtrDiff >= holdAngle) { wait 0.
 		set rtrDiff to 90 - vang(ship:up:vector:normalized, ship:srfretrograde:vector:normalized).
-		print rtrDiff at (0, 1).
 	}
 	steeringmanager:resettodefault().
 	sas off.
 	
 	if (landProfile = 4 and core:tag = "1") { 
 		set reentryHeight to reentryHeight + 5000.
-		set reentryVelocity to reentryVelocity * 1.500.
+		set reentryVelocity to reentryVelocity * 1.5.
 	}
 	
 	lock steering to lookdirup(
 		ship:srfretrograde:vector:normalized, 
 		heading(180, 0):vector).
 		
-	wait until alt:radar < reentryHeight.
+	wait until alt:radar < (reentryHeight + ((maxPayload - payloadMass) / 7)).
 
 	EngSpl(1).
 	toggle AG2.
 	
-	wait until ship:airspeed < (reentryVelocity + ((maxPayload - payloadMass) / 100)).
+	wait until ship:airspeed < (reentryVelocity - ((maxPayload - payloadMass) / 35)).
 	EngSpl(0).
 }
 
 function AtmGNC {
 	// if (landProfile < 3) { EngSwitch(1, 2). }
+	// FIX REENTRY DISTANCE-VELOCITY FUEL BALANCE.
 	EngSwitch(1, 2).
 	
 	local downRange is 0.
-	lock downRange to Impact(4, landProfile, LZ).
+	lock downRange to Impact(1, landProfile, LZ).
 	
 	lock LATvector to vxcl(up:vector, (
 		latlng(ship:geoposition:lat - 0.01, ship:geoposition:lng):position
@@ -360,20 +381,6 @@ function AtmGNC {
 	).
 
 	rcs on. when (ship:altitude < 11000) then { rcs off. } 
-
-	local velGain is 0.
-	until (ship:verticalspeed > -400) { wait 0.
-		if (abs(ship:verticalspeed) < 400) {
-			set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
-		}
-		else {
-			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
-		}
-
-		local altvelOS is (overshootAlt + velGain) / 2.
-		set AlatPID:setpoint to ((1 - altvelOS) * LZ:lat) + (altvelOS * overshootCoords:lat).
-		set AlngPID:setpoint to ((1 - altvelOS) * LZ:lng) + (altvelOS * overshootCoords:lng).
-	}
 	
 	local isCoreBooster is 1.	// for correct engine selection
 	if (core:tag = "2" or core:tag = "3") {
@@ -388,30 +395,36 @@ function AtmGNC {
 	list engines in engList.
 	local eng is engList[isCoreBooster].
 	local mFlowRate is eng:availablethrustat(1) / (eng:ispat(1) * constant:g0).
+	local timestep is 1.
+	local startT is time:seconds.
+	local deltaT is 0.
+	local bodRad is body:radius.
 
 	until false {
+		// set startT to time:seconds.
 
-		if (abs(ship:verticalspeed) < 400) {
-			set velGain to min(1, (1 / 400) * abs(ship:verticalspeed)).
-		}
-		else {
-			set velGain to min(1, ((-0.5 /  400) * abs(ship:verticalspeed)) + 1.5).
-		}
-
-		local altvelOS is ((overshootAlt + velGain) / 2).
+		local overshootQ is max(0, min(0.5, ship:q - 0.15)).
+		local altvelOS is overshootAlt + overshootQ.
 		set AlatPID:setpoint to ((1 - altvelOS) * LZ:lat) + (altvelOS * overshootCoords:lat).
 		set AlngPID:setpoint to ((1 - altvelOS) * LZ:lng) + (altvelOS * overshootCoords:lng).
 
+		// local futureTime is time:seconds + deltaT.
+		// local futureAlt is (body:position - positionAt(ship, futureTime)):mag - bodRad.
+		// local futureVel is velocityAt(ship, futureTime):surface:mag.
+
 		if (IntegLand(
-			ship:altitude, 
+			alt:radar, 
 			ship:verticalspeed, 
 			isCoreBooster,
 			mFlowRate,
 			eng,
 			thrustGain, 
-			Impact(4, landProfile, LZ), 
-			1)
+			Impact(1, landProfile, LZ), 
+			0.2)
 		) { break. }
+
+		// set deltaT to time:seconds - startT.
+		// set timestep to deltaT.
 	}
 }
 
@@ -425,7 +438,8 @@ function Land {
 		srfretrograde:vector, 
 		LATvector).
 	
-	if ((landProfile > 3  or forceThree) and LandThrottle() > 1) { wait 1. EngSwitch(2, 1). }
+	local doThreeEngines is false.
+	if ((landProfile > 3  or forceThree) and LandThrottle() > 1) { wait 1. EngSwitch(2, 1). set doThreeEngines to true. }
 	
 	HlatPID:reset(). HlngPID:reset().
 	lock steering to lookdirup(
@@ -439,11 +453,12 @@ function Land {
 		LATvector
 	).
 	
-	wait until LandThrottle() < 0.333.
-	
+	if (doThreeEngines) { 
+		// wait until LandThrottle() < 0.333.
+		wait until ((landProfile > 3 or forceThree) and LandThrottle() < 0.333). 
+		EngSwitch(1, 2).
+	}
 	lock throt to LandThrottle().
-
-	when ((landProfile > 3 or forceThree) and throt < 0.333) then { EngSwitch(1, 2). }
 	
 	wait until ship:verticalspeed > -5.
 	lock throt to 1.2 * ((ship:mass * 9.81) / max(ship:availablethrust, 0.001)).
@@ -463,19 +478,18 @@ function Land {
 }
 
 function PIDsetup {
-	global atmPID is list(62.5, 1.65, 4, tan(20)).
-	global hvrPID is list(325, 80, 215, tan(10)).
+	global atmPID is list(45, 1.65, 3.25, tan(10)).
+	global hvrPID is list(300, 75, 205, tan(15)).
 
 	set lerpToSetpoint to 0.
 	set osGain to 1.667.
-	local velGain is 0.
 
-	if (landProfile = 1 or core:tag = "2" or core:tag = "3") {
-		lock overshootAlt to max(0.333, min(0.333, (max(0, (max(0, alt:radar) - 5000)) / 100000) ^ 0.3667)).
-	} 
-	else {
-		lock overshootAlt to max(0.333, min(1, max(0, ship:q - 0.3) * osGain)).
-	}
+	// if (landProfile = 1 or core:tag = "2" or core:tag = "3") {
+	lock overshootAlt to max(0, min(0.5, (max(0, alt:radar - 6000) / 100000) ^ 0.38)).
+	// } 
+	// else {
+	// 	lock overshootAlt to max(0.333, min(1, max(0, ship:q - 0.3) * osGain)).
+	// }
 
 	set overshootCoords to ship:body:geopositionof(
 		LZ:altitudeposition(0) - ship:geoPosition:altitudeposition(0)
@@ -484,8 +498,8 @@ function PIDsetup {
 	set AlatPID to pidloop(atmPID[0], atmPID[1], atmPID[2], -atmPID[3], atmPID[3]).
 	set AlngPID to pidloop(atmPID[0], atmPID[1], atmPID[2], -atmPID[3], atmPID[3]).
 
-	lock AlatOut to AlatPID:update(time:seconds, Impact(1, landProfile, LZ)).
-	lock AlngOut to AlngPID:update(time:seconds, Impact(2, landProfile, LZ)).
+	lock AlatOut to AlatPID:update(time:seconds, Impact(0, landProfile, LZ):lat).
+	lock AlngOut to AlngPID:update(time:seconds, Impact(0, landProfile, LZ):lng).
 
 	set HlatPID to pidloop(hvrPID[0], hvrPID[1], hvrPID[2], -hvrPID[3], hvrPID[3]).
 	set HlatPID:setpoint to LZ:lat.	
@@ -493,8 +507,12 @@ function PIDsetup {
 	set HlngPID to pidloop(hvrPID[0], hvrPID[1], hvrPID[2], -hvrPID[3], hvrPID[3]).
 	set HlngPID:setpoint to LZ:lng.
 
-	lock HlatOut to HlatPID:update(time:seconds, Impact(1, landProfile, LZ)).
-	lock HlngOut to HlngPID:update(time:seconds, Impact(2, landProfile, LZ)).
+	lock HlatOut to HlatPID:update(time:seconds, 
+		((body:geoPositionof(body:position:normalized * ship:altitude):lat * 0.2) + 
+		(Impact(0, landProfile, LZ):lat * 0.8))).
+	lock HlngOut to HlngPID:update(time:seconds, 
+		((body:geoPositionof(body:position:normalized * ship:altitude):lng * 0.2) + 
+		(Impact(0, landProfile, LZ):lng * 0.8))).
 
 }
 

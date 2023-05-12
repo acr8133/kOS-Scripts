@@ -379,12 +379,11 @@ function IntegLand { 		// landing height check through integration
 	local dragForce is 0.
 	
 	local shipMass is ship:mass.
-	local shipACD is 8.
+	local shipACD is 8.5.	// 8.15 actual
 	
 	// local bodmu is body:mu.
 	// local bodrad is body:radius.
 	set simHeight to sqrt(simHeight^2 + dist^2).
-
 	set mFlowRate to mFlowRate * timestep.
 	
 	until (simSpeed > 0) {
@@ -404,16 +403,14 @@ function IntegLand { 		// landing height check through integration
 		// combine all acceleration to single one
 		set simAcc to 9.81 - ((dragForce + engineForce) / shipMass).
 
-		// mass flow integration
-		set shipMass to shipMass - mFlowRate.
-
 		// physics integration
 		set simSpeed to simSpeed - (simAcc * timestep).
 		set simHeight to simHeight + (simSpeed * timestep).
+		set shipMass to max(ship:drymass, shipMass - mFlowRate).
 	}
 	
-	print simHeight at (0, 2).
-	if (simHeight > 100) { return false. }
+	// print simHeight at (0, 2).
+	if (simHeight > 50) { return false. }
 	else { return true. }
 }
 
@@ -477,43 +474,28 @@ function GroundTrack {		// impact point through orbit prediction
 function Impact {			// ground track and trajectories
     parameter nav, lP, LZ.	// return type, landProfile
 
-    local impData is ImpactUT().
-	local impLatLng0 is GroundTrack(positionat(ship,impData["time"]),impData["time"]).
+    local impData is 0.
+	local impLatLng0 is 0.
 	local impLatLng1 is 0.
-	local LZToBody is 0.
 	local landToBody is 0.
 	local dRange is 0.
-	set LZToBody to body:position - LZ:altitudeposition(0).
+	local LZToBody is body:position - LZ:altitudeposition(0).
 	
-    if (alt:radar > 50) {
-        if (lP > 3) {
-            if (nav = 1) { return impLatLng0:lat. }
-            else if (nav = 2) { return impLatLng0:lng. }
-            else if (nav = 3) { return impLatLng0. }
-            else { 	
-				set landToBody to body:position - impLatLng0:altitudeposition(0).
-				set dRange to (vang(landToBody, LZToBody) / 360) * (2 * constant:pi * body:radius).
-				return dRange. 
-			}
-        } 
-		else {
-            if (addons:tr:hasimpact) { set impLatLng1 to addons:tr:impactpos.}
-			else { set impLatLng1 to impLatLng0. }
+    if (addons:tr:hasimpact and lP < 3) {
+        set impLatLng1 to addons:tr:impactpos.
 			
-            if (nav = 1) { return impLatLng1:lat. }
-            else if (nav = 2) { return impLatLng1:lng. }
-            else if (nav = 3) { return impLatLng1. }
-			else { 
-				set landToBody to body:position - impLatLng1:altitudeposition(0).
-				set dRange to (vang(landToBody, LZToBody) / 360) * (2 * constant:pi * body:radius).
-				return dRange.  
-			}
-        }
+		if (nav = 0) { return impLatLng1. }
+		else { 
+			set landToBody to body:position - impLatLng1:altitudeposition(0).
+			set dRange to (vang(landToBody, LZToBody) / 360) * (2 * constant:pi * body:radius).
+			return dRange.  
+		}
     } 
 	else {
-        if (nav = 1) { return impLatLng0:lat. }
-        else if (nav = 2) { return impLatLng0:lng. }
-        else if (nav = 3) { return impLatLng0. }
+		set impData to ImpactUT().
+		set impLatLng0 to GroundTrack(positionat(ship,impData["time"]),impData["time"]).
+       
+	    if (nav = 0) { return impLatLng0. }
         else { 
 			set landToBody to body:position - impLatLng0:altitudeposition(0).
 			set dRange to (vang(landToBody, LZToBody) / 360) * (2 * constant:pi * body:radius).
@@ -523,6 +505,13 @@ function Impact {			// ground track and trajectories
 }
 
 // CRAFT SYSTEMS / UTILITIES
+
+function Prt {
+	parameter textInput.
+
+	local met is time(missionTime):clock.
+	print "[" + met + "]: " + textInput.
+}
 
 function SafeStage {		// avoid staging when unfocused
 
@@ -748,8 +737,8 @@ function ExecNode {			// execute maneuver node
 			
 			local angleMult is ((5 - vang(ship:facing:forevector, nd:deltav)) / 5).
 			local reqThrot is (min(nd:deltav:mag / maxAcc, 1) * angleMult).
-			if (reqThrot > 0.25) { set throt to reqThrot. }
-			else { set throt to 1. }
+			if (reqThrot > 0.5) { set throt to reqThrot. }
+			else { set throt to reqThrot * 2. }
 		}
         else { 
 			RCSTranslate(nv * ship:facing:forevector, 

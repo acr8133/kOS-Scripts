@@ -29,6 +29,8 @@ local MECOangle is pLex["MECOangle"].
 local tanAlt is pLex["tanAlt"].
 local landProfile is pLex["landProfile"].
 local payloadType is pLex["payloadType"].
+local maxPayload is pLex["maxPayload"].
+local payloadMass is pLex["payloadMass"].
 local fairingSepAlt is pLex["fairingSepAlt"].
 local atmHeight is pLex["atmHeight"].
 local rndBool is pLex["rndBool"].
@@ -56,24 +58,30 @@ local MECOangleOffset is 0.
 local localg is body:mu / body:position:sqrmagnitude.
 lock currTWR to ship:availablethrust / (ship:mass * localg).
 
+local skipAscent is false.
+local activeEngine is 0.
+list engines in engList.
+for eng in engList {
+	if (eng:ignition) { set activeEngine to eng. }
+}
+if not (activeEngine = 0) {
+	if (activeEngine:visp > 340) { set skipAscent to true. }		// LAZY WAY TO CHECK IF WE'RE IN MVAC	
+}
 wait 1.
 clearscreen.
 
-Liftoff().
-Ascent(0).
-if (landProfile = 4 or landProfile = 5) { BECO(). }
-if (landProfile > 3 and landProfile < 6) { Ascent(1). }
-MECO().
+if not (skipAscent) {
+	Liftoff().
+	Ascent(0).
+	if (landProfile = 4 or landProfile = 5) { BECO(). }
+	if (landProfile > 3 and landProfile < 6) { Ascent(1). }
+	MECO().
+}
 BurnToApoapsis().
 Circularization().
 if (tgtAop:istype("scalar")) { MatchSMA(). }
 
 clearScreen.
-print ship:apoapsis.
-print ship:periapsis.
-print ship:orbit:inclination.
-print ship:orbit:lan.
-print ship:orbit:argumentofperiapsis.
 
 // set target to Didymos.
 // run sc_gnc.
@@ -89,8 +97,10 @@ if not (rndBool = "") {
 	Docking().
 }
 
+set core:bootfilename to "".	// stops the core from waking up on reload
+
 function Liftoff {
-	EngSpl(1). wait 0.5. SafeStage().
+	EngSpl(1). wait 0.5. sas off. SafeStage().
 }
 
 function Ascent {
@@ -105,8 +115,10 @@ function Ascent {
 	else { 
 		lock angThr to 90 - vang(ship:up:vector:normalized, ship:facing:forevector).
 		lock throt to 1. wait until ship:verticalspeed > 10.
-		lock throtLim to ((max(0, (90 - 30) - angThr) / 100) * 3.5).
-		lock throt to max(0.333, 1 - throtLim).
+		local throtPld is (maxPayload - payloadMass) / 35000.
+		lock throtLim to ((max(0, (90 - (MECOangle * 0.45)) - angThr) / 90) * (3 + throtPld)).
+		lock throtAdd to ((max(0, (90 - (MECOangle * 0.55)) - angThr) / 90) * 3.1).
+		lock throt to (1 - throtLim) + throtAdd.
 	}
 
 	local baseThrust is ship:availablethrust.
@@ -162,7 +174,7 @@ function Ascent {
 					(90 * (1 - ship:altitude /
 					(((tgtAlt + tgtOrbPE) / 2) * (pitchGain / 200))
 					))
-					, 0), MECOangle).
+					, 1), MECOangle).
 			}
 		}
 		else {

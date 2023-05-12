@@ -58,14 +58,14 @@ function RTLSmode { // SINGLE CORE RTLS
 	pLex:add("tgtAlt", 60000).
 	pLex:add("pitchGain", 110).
 	pLex:add("reentryHeight", 32500).
-	pLex:add("reentryVelocity", 600).
+	pLex:add("reentryVelocity", 550).
 }
 
 function ASDSmode { // SINGLE CORE ASDS
 	pLex:add("maxPayload", 9000).
 	pLex:add("tanAlt", body:atm:height).
 	pLex:add("MECOangle", 40).
-	pLex:add("tgtAlt", 65000).
+	pLex:add("tgtAlt", 70000).
 	pLex:add("pitchGain", 97).
 	pLex:add("reentryHeight", 35000).
 	pLex:add("reentryVelocity", 800).

@@ -104,7 +104,7 @@ set sect_2:style:height to 20.
 	set s2_button_2:exclusive to true.
 	sect_2:addspacing(1).
 
-	local s2_button_3 is sect_2:addbutton("STARSHIP").
+	local s2_button_3 is sect_2:addbutton("SS (WIP)").
 	PayloadTypeFormat(s2_button_3, sect_2).
 	set s2_button_3:toggle to true.
 	set s2_button_3:exclusive to true.
@@ -152,10 +152,10 @@ set sect_4:style:bg to "ASSET/empty_bg".
 		local s4_opt_2 is s4_row_0:addvlayout().
 		set s4_opt_2:style:width to s4_row_0:style:width / 3.
 		Zero_MarginPadding(s4_opt_2).
-			local s4_opt_2_t is s4_opt_2:addlabel("INCLINATION").
+			local s4_opt_2_t is s4_opt_2:addlabel("MASS").
 			OrbitParameterFormat(s4_opt_2_t).
-			local INCinp is s4_opt_2:addtextfield().
-			OrbitParameterTextFieldFormat(INCinp, false).
+			local MASSinp is s4_opt_2:addtextfield().
+			OrbitParameterTextFieldFormat(MASSinp, false).
 
 	local s4_row_1 is sect_4:addhlayout().
 	set s4_row_1:style:width to sect_4:style:width.
@@ -191,10 +191,10 @@ set sect_4:style:bg to "ASSET/empty_bg".
 		set s5_opt_5:style:width to s4_row_1:style:width / 3.
 		Zero_MarginPadding(s5_opt_5).
 		set s5_opt_5:style:align to "center".
-			local s5_opt_5_t is s5_opt_5:addlabel("MASS").
+			local s5_opt_5_t is s5_opt_5:addlabel("INCLINATION").
 			OrbitParameterFormat(s5_opt_5_t).
-			local MASSinp is s5_opt_5:addtextfield().
-			OrbitParameterTextFieldFormat(MASSinp, false).
+			local INCinp is s5_opt_5:addtextfield().
+			OrbitParameterTextFieldFormat(INCinp, false).
 
 	local s4_row_2 is sect_4:addhlayout().
 	set s4_row_2:style:width to sect_4:style:width.
@@ -205,8 +205,9 @@ set sect_4:style:bg to "ASSET/empty_bg".
 		OrbitModeFormat(s4_opt_5, s4_row_2, "right").
 		set s4_opt_5:toggle to true. 
 		set s4_opt_5:exclusive to true. 
+		set s4_opt_5:pressed to true.
 
-		local s4_opt_6 is s4_row_2:addbutton("DOCK").
+		local s4_opt_6 is s4_row_2:addbutton("-").
 		OrbitModeFormat(s4_opt_6, s4_row_2, "left").
 		set s4_opt_6:toggle to true. 
 		set s4_opt_6:exclusive to true. 
@@ -276,7 +277,9 @@ global launchButton is sect_7:addbutton("- START MISSION -").
 Zero_MarginPadding(launchButton).
 FinalButtonsFormat(launchButton).
 
-missionGUI:show().
+local boosterFound is false.
+for core in coreList { if (core:tag = "1") { set boosterFound to true. } }
+if (boosterFound) { missionGUI:show(). }
 
 // HANDLE GUI
 
@@ -294,12 +297,15 @@ if (exists("0:/params1.json")) {
 		}
 	}
 	
-	if (pLex["rndBool"]:length > 0 and tgtExists) {
-		set target to pLex["rndBool"].
+	if (ship = kuniverse:activevessel) {
+		if (pLex["rndBool"]:tostring:length > 0 and tgtExists and (ship = kuniverse:activevessel)) {
+			set target to pLex["rndBool"].
+		}
+		else {
+			set target to "".
+		}
 	}
-	else {
-		set target to "".
-	}
+
 
 	set loadButton:enabled to true.
 }
@@ -308,10 +314,10 @@ else {
 		"payloadType", 0,		// 1-F9, 2-D2, 3-D1, 4-SS 
 		"tgtOrbAP", 0,
 		"tgtOrbPE", 0,
-		"tgtInc", 0,
+		"payloadMass", 0,
 		"tgtLan", 0,
 		"tgtAop", 0,
-		"payloadMass", 0,
+		"tgtInc", 0,
 		"rndBool", "",			// tgt name, empty if manual input
 		"landProfile", 0
 	).
@@ -322,12 +328,12 @@ else {
 local pTypeCHK is false.
 local altAPCHK is false.
 local altPECHK is false.
-local incCHK is false.
+local massCHK is false.
 local lanCHK0 is false.
 local lanCHK1 is false.
 local aopCHK0 is false.
 local aopCHK1 is false.
-local massCHK is false.
+local incCHK is false.
 local orbmdCHK is false.
 local voidCHK is true.
 
@@ -337,12 +343,12 @@ set s2_button_2:onclick to PayloadType_del@.
 set s2_button_3:onclick to PayloadType_del@.
 set APOinp:onchange to AP_del@.
 set PERinp:onchange to PE_del@.
-set INCinp:onchange to INC_del@.
+set MASSinp:onchange to MASS_del@.
 set LANinp:onchange to LAN_del@.
 set LANbut:ontoggle to LAN_del@.
 set AOPinp:onchange to AOP_del@.
 set AOPbut:ontoggle to AOP_del@.
-set MASSinp:onchange to MASS_del@.
+set INCinp:onchange to INC_del@.
 set s4_opt_5:onclick to OrbitMode_del@.
 
 local boosterLookup0 is 0.
@@ -351,9 +357,9 @@ local boosterLookup1 is 0.
 if (exists("0:/params1.json")) {
 
 	if (coreIterate < 2 or (coreIterate = 2 and pLex["landProfile"] < 4)) {
-		set popupList[0]:index to 0.
+		if (popupList:length > 0) { set popupList[0]:index to 0. }
 		set boosterLookup0 to 1.
-		BoosterType_del(popupList[0]:value, 0).
+		if (popupList:length > 0) { BoosterType_del(popupList[0]:value, 0). }
 		if (coreIterate = 2) { BoosterType_del(popupList[1]:value, 1). }
 	}
 	else {
@@ -373,13 +379,13 @@ if (exists("0:/params1.json")) {
 		}
 		if (pLex["landProfile"] = 4) { 
 			set popupList[0]:index to 0.
-			set popupList[1]:index to 1. 
+			set popupList[1]:index to 0. 
 			set boosterLookup0 to 2.
 			set boosterLookup1 to 1.
 		}
 		if (pLex["landProfile"] = 5) { 
 			set popupList[0]:index to 1.
-			set popupList[1]:index to 0. 
+			set popupList[1]:index to 1. 
 			set boosterLookup0 to 3.
 			set boosterLookup1 to 1.
 		}
@@ -398,15 +404,27 @@ else {
 	}
 }
 
-set popupList[0]:onclick to { return BoosterType_del(popupList[0]:value, 0). }.
-set popupList[0]:onchange to REC_del0@.
+if (popupList:length > 0) {
+	set popupList[0]:onclick to { return BoosterType_del(popupList[0]:value, 0). }.
+	set popupList[0]:onchange to REC_del0@.
+}
 if (popupList:length = 2) {
 	set popupList[1]:onchange to REC_del1@.
 }
 
 startMissionChecker().
 
-until (launchButton:pressed or loadButton:pressed) { startMissionChecker(). dbg(). wait 0. }
+local skipAscent is false.
+local activeEngine is 0.
+list engines in engList.
+for eng in engList {
+	if (eng:ignition) { set activeEngine to eng. }
+}
+if not (activeEngine = 0) {
+	if (activeEngine:visp > 340) { set skipAscent to true. }		// LAZY WAY TO CHECK IF WE'RE IN MVAC	
+}
+
+until (launchButton:pressed or loadButton:pressed or skipAscent) { startMissionChecker(). dbg(). wait 0. }
 if (launchButton:pressed) {
 	writejson(pLex, "0:/params1.json").
 }
@@ -424,10 +442,22 @@ set launchButton:pressed to false.
 // }
 
 function PayloadType_del {
-	if (s2_button_0:pressed) { set pLex["payloadType"] to 1. }
-	if (s2_button_1:pressed) { set pLex["payloadType"] to 2. }
-	if (s2_button_2:pressed) { set pLex["payloadType"] to 3. }
-	if (s2_button_3:pressed) { set pLex["payloadType"] to 4. }
+	if (s2_button_0:pressed) { 
+		set pLex["payloadType"] to 1. 
+		set s4_opt_6:text to "RENDEZVOUS".
+	}
+	if (s2_button_1:pressed) { 
+		set pLex["payloadType"] to 2.
+		set s4_opt_6:text to "DOCK".
+	}
+	if (s2_button_2:pressed) { 
+		set pLex["payloadType"] to 3.
+		set s4_opt_6:text to "DOCK".
+	}
+	if (s2_button_3:pressed) { 
+		set pLex["payloadType"] to 4.
+		set s4_opt_6:text to "RENDEZVOUS".
+	}
 	set pTypeCHK to true.
 	print pLex["payloadType"] at (0, 0).
 }
@@ -449,13 +479,13 @@ function PE_del { parameter val.
 	print pLex["tgtOrbPE"] at (0, 2).
 
 }
-function INC_del { parameter val.
+function MASS_del { parameter val.
 	if (val:tostring:length > 0) { 
-		set pLex["tgtInc"] to val:tonumber. 
-		set incCHK to true.
+		set pLex["payloadMass"] to val:tonumber. 
+		set massCHK to true.
 	} 
-	else { set incCHK to false. }
-	print pLex["tgtInc"] at (0, 3).
+	else { set massCHK to false. }
+	print pLex["payloadMass"] at (0, 3).
 }
 function LAN_del { parameter val.
 	if (val:typename = "string") {
@@ -489,38 +519,53 @@ function AOP_del { parameter val.
 	else {
 		set pLex["tgtAop"] to true.
 		set AOPinp:text to "".
-		if (val) { set aopCHK1 to true.} 
+		if (val) { set aopCHK1 to true. } 
 		else { set aopCHK1 to false. }
 		set aopCHK0 to false.
 	}
 	print pLex["tgtAop"] at (0, 5).
 }
-function MASS_del { parameter val.
+function INC_del { parameter val.
 	if (val:tostring:length > 0) { 
-		set pLex["payloadMass"] to val:tonumber. 
-		set massCHK to true.
+		set pLex["tgtInc"] to val:tonumber. 
+		set incCHK to true.
 	} 
-	else { set massCHK to false. }
-	print pLex["payloadMass"] at (0, 6).
+	else { set incCHK to false. }
+	print pLex["tgtInc"] at (0, 6).
 }
 
 function OrbitMode_del {
-	if (s4_opt_5:pressed) { 
+	if (s4_opt_5:pressed and (ship = kuniverse:activevessel)) { 
 		set target to "".
 		set pLex["rndBool"] to "".
-		s4_row_0:show(). s4_row_1:show().
+		s4_row_1:show().
 		set orbmdCHK to true.
 	}
-	if (s4_opt_6:pressed) {
+	if (s4_opt_6:pressed and (ship = kuniverse:activevessel)) {
 		if (hasTarget) { 
 			set pLex["rndBool"] to target.
+			set pLex["tgtAop"] to target:orbit:argumentofperiapsis.
+			set aopCHK0 to true.
+			set aopCHK1 to false.
+			set pLex["tgtLan"] to target:orbit:lan.
+			set lanCHK0 to true.
+			set lanCHK1 to false.
 			set orbmdCHK to true.
+			set pLex["tgtInc"] to target:orbit:inclination.	
+			set incCHK to true.
+			print pLex["tgtLan"] at (0, 4).
+			print pLex["tgtAop"] at (0, 5).
 		}
 		else {
 			set pLex["rndBool"] to "". 
 			set orbmdCHK to false.
+			set aopCHK0 to false.
+			set aopCHK1 to true.
+			set lanCHK0 to false.
+			set lanCHK1 to true.
+			set incCHK to true.
 		}
-		s4_row_0:hide(). s4_row_1:hide().
+		s4_row_1:hide().
 	}
 	
 	print pLex["rndBool"] at (0, 7).
@@ -573,9 +618,41 @@ function startMissionChecker {
 	}
 	else { set voidCHK to true. }
 
-	if (pTypeCHK and altAPCHK and altPECHK and incCHK and
+	if (s4_opt_5:pressed) { 
+		set target to "".
+		set pLex["rndBool"] to "".
+		s4_row_1:show().
+		set orbmdCHK to true.
+	}
+	if (s4_opt_6:pressed) {
+		if (hasTarget) { 
+			set pLex["rndBool"] to target.
+			set pLex["tgtAop"] to target:orbit:argumentofperiapsis.
+			set aopCHK0 to true.
+			set aopCHK1 to false.
+			set pLex["tgtLan"] to target:orbit:lan.
+			set lanCHK0 to true.
+			set lanCHK1 to false.
+			set orbmdCHK to true.
+			set pLex["tgtInc"] to target:orbit:inclination.	
+			set incCHK to true.
+			print pLex["tgtLan"] at (0, 4).
+			print pLex["tgtAop"] at (0, 5).
+		}
+		else {
+			set pLex["rndBool"] to "". 
+			set orbmdCHK to false.
+			set aopCHK0 to false.
+			set aopCHK1 to true.
+			set lanCHK0 to false.
+			set lanCHK1 to true.
+			set incCHK to true.
+		}
+	}
+
+	if (pTypeCHK and altAPCHK and altPECHK and massCHK and
 		(lanCHK0 or lanCHK1) and (aopCHK0 or aopCHK1) and 
-		massCHK and orbmdCHK and voidCHK)
+		incCHK and orbmdCHK and voidCHK)
 	{
 		set launchButton:enabled to true.
 	}
@@ -586,7 +663,7 @@ function startMissionChecker {
 }
 
 function dbg {
-	local ln_start is 30.
+	local ln_start is 20.
 	
 	print pTypeCHK at (0, ln_start + 0).
 	print altAPCHK at (0, ln_start + 1).
